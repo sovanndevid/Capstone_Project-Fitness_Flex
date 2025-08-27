@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:fitness_flex_app/core/themes/app_theme.dart';
+import 'package:fitness_flex_app/navigation/app_router.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -52,9 +53,14 @@ class _HomePageState extends State<HomePage> {
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index == 1) {
+      // Workout tab
+      Navigator.pushNamed(context, AppRouter.workout);
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   @override

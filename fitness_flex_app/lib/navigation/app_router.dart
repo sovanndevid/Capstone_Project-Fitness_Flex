@@ -4,6 +4,7 @@ import 'package:fitness_flex_app/presentation/pages/onboarding_page.dart';
 import 'package:fitness_flex_app/presentation/pages/login_page.dart';
 import 'package:fitness_flex_app/presentation/pages/register_page.dart';
 import 'package:fitness_flex_app/presentation/pages/home_page.dart';
+import 'package:fitness_flex_app/presentation/pages/workout_list_page.dart';
 
 class AppRouter {
   static const String splash = '/';
@@ -25,6 +26,7 @@ class AppRouter {
       login: (context) => const LoginPage(),
       register: (context) => const RegisterPage(),
       home: (context) => const HomePage(),
+      workout: (context) => const WorkoutListPage(),
       // We'll add other routes as we create the pages
     };
   }
