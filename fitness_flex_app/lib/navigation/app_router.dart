@@ -5,6 +5,8 @@ import 'package:fitness_flex_app/presentation/pages/login_page.dart';
 import 'package:fitness_flex_app/presentation/pages/register_page.dart';
 import 'package:fitness_flex_app/presentation/pages/home_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_list_page.dart';
+import 'package:fitness_flex_app/features/form_check/form_checker_screen.dart';
+
 
 class AppRouter {
   static const String splash = '/';
@@ -18,6 +20,7 @@ class AppRouter {
   static const String progress = '/progress';
   static const String community = '/community';
   static const String settings = '/settings';
+  static const formCheck = '/form-check';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -27,7 +30,12 @@ class AppRouter {
       register: (context) => const RegisterPage(),
       home: (context) => const HomePage(),
       workout: (context) => const WorkoutListPage(),
+
       // We'll add other routes as we create the pages
+
+      formCheck: (context) => const FormCheckerScreen(),
     };
   }
 }
+
+
