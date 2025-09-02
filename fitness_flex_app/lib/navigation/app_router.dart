@@ -5,8 +5,9 @@ import 'package:fitness_flex_app/presentation/pages/login_page.dart';
 import 'package:fitness_flex_app/presentation/pages/register_page.dart';
 import 'package:fitness_flex_app/presentation/pages/home_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_list_page.dart';
-import 'package:fitness_flex_app/features/form_check/form_checker_screen.dart';
-
+import 'package:fitness_flex_app/presentation/pages/nutrition_page.dart';
+import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart';
+import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
 
 class AppRouter {
   static const String splash = '/';
@@ -22,6 +23,8 @@ class AppRouter {
   static const String settings = '/settings';
   static const formCheck = '/form-check';
 
+  static final NutritionRepository _nutritionRepository = NutritionRepository();
+
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       splash: (context) => const SplashPage(),
@@ -30,12 +33,10 @@ class AppRouter {
       register: (context) => const RegisterPage(),
       home: (context) => const HomePage(),
       workout: (context) => const WorkoutListPage(),
-
-      // We'll add other routes as we create the pages
-
-      formCheck: (context) => const FormCheckerScreen(),
+      nutrition: (context) => const NutritionPage(),
+      '/mealHistory': (context) =>
+          MealHistoryPage(nutritionRepository: _nutritionRepository),
+      // Add other routes as you create the pages
     };
   }
 }
-
-

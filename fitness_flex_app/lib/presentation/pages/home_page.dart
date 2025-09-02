@@ -56,6 +56,9 @@ class _HomePageState extends State<HomePage> {
     if (index == 1) {
       // Workout tab
       Navigator.pushNamed(context, AppRouter.workout);
+    } else if (index == 2) {
+      // Nutrition tab
+      Navigator.pushNamed(context, AppRouter.nutrition);
     } else {
       setState(() {
         _selectedIndex = index;
@@ -141,8 +144,8 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRouter.formCheck),
         icon: const Icon(Icons.camera_alt),
-         label: const Text('Form Checker'),
-      ), 
+        label: const Text('Form Checker'),
+      ),
 
       bottomNavigationBar: BottomNavigationBar(
         items: const [
