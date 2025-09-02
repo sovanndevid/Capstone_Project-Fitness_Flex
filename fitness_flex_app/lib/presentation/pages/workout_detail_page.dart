@@ -103,7 +103,14 @@ class WorkoutDetailPage extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // Start workout
+                  // Start workout functionality
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Starting ${workout.title}...'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  // You can navigate to a workout tracking page here
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),

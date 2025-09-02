@@ -8,6 +8,7 @@ import 'package:fitness_flex_app/presentation/pages/workout_list_page.dart';
 import 'package:fitness_flex_app/presentation/pages/nutrition_page.dart';
 import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart';
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
+import 'package:fitness_flex_app/screens/workout_home.dart';
 
 class AppRouter {
   static const String splash = '/';
@@ -22,6 +23,7 @@ class AppRouter {
   static const String community = '/community';
   static const String settings = '/settings';
   static const formCheck = '/form-check';
+  static const String workouts = '/workouts';
 
   static final NutritionRepository _nutritionRepository = NutritionRepository();
 
@@ -38,5 +40,16 @@ class AppRouter {
           MealHistoryPage(nutritionRepository: _nutritionRepository),
       // Add other routes as you create the pages
     };
+  }
+
+  static Route<dynamic> generateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      // ... your other routes
+      case workouts:
+        return MaterialPageRoute(builder: (_) => const WorkoutHomeScreen());
+      // ... your other routes
+      default:
+        return MaterialPageRoute(builder: (_) => const SplashPage());
+    }
   }
 }

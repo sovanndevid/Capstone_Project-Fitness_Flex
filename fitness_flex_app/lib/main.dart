@@ -37,14 +37,26 @@ class MyApp extends StatelessWidget {
           children: [
             WorkoutCard(
               title: "Push Day",
+              category: "Strength Training",
               description: "Chest, Shoulders, Triceps workout plan",
+              duration: "60 min",
+              calories: "400",
+              difficulty: "Intermediate",
+              isLiked: false,
+              onLike: () {},
               onTap: () {
                 print("Push Day tapped!");
               },
             ),
             WorkoutCard(
               title: "Pull Day",
+              category: "Strength Training",
               description: "Back and Biceps workout plan",
+              duration: "55 min",
+              calories: "350",
+              difficulty: "Intermediate",
+              isLiked: false,
+              onLike: () {},
               onTap: () {
                 print("Pull Day tapped!");
               },

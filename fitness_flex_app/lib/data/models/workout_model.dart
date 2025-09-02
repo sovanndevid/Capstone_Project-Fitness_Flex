@@ -8,6 +8,9 @@ class Workout {
   final String difficulty;
   final List<WorkoutExercise> exercises;
   final bool isFavorite;
+  final String category;
+  final String equipment;
+  final String focusArea;
 
   Workout({
     required this.id,
@@ -18,6 +21,9 @@ class Workout {
     required this.calories,
     required this.difficulty,
     required this.exercises,
+    required this.category,
+    required this.equipment,
+    required this.focusArea,
     this.isFavorite = false,
   });
 
@@ -31,6 +37,9 @@ class Workout {
     String? difficulty,
     List<WorkoutExercise>? exercises,
     bool? isFavorite,
+    String? category,
+    String? equipment,
+    String? focusArea,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -42,8 +51,13 @@ class Workout {
       difficulty: difficulty ?? this.difficulty,
       exercises: exercises ?? this.exercises,
       isFavorite: isFavorite ?? this.isFavorite,
+      category: category ?? this.category,
+      equipment: equipment ?? this.equipment,
+      focusArea: focusArea ?? this.focusArea,
     );
   }
+
+  // Add toMap and fromMap methods if needed
 }
 
 class WorkoutExercise {
@@ -70,16 +84,24 @@ class WorkoutExercise {
   });
 }
 
-class WorkoutCategory {
-  final String id;
-  final String name;
-  final String imageUrl;
-  final int workoutCount;
+// Use this enum everywhere in your code!
+enum WorkoutCategory {
+  strength('Strength Training', '💪'),
+  cardio('Cardio', '🏃‍♂️'),
+  yoga('Yoga & Flexibility', '🧘‍♀️'),
+  hiit('HIIT', '🔥'),
+  custom('Custom', '⭐');
 
-  WorkoutCategory({
-    required this.id,
-    required this.name,
-    required this.imageUrl,
-    required this.workoutCount,
-  });
+  final String name;
+  final String emoji;
+  const WorkoutCategory(this.name, this.emoji);
+}
+
+enum WorkoutDifficulty {
+  beginner('Beginner'),
+  intermediate('Intermediate'),
+  advanced('Advanced');
+
+  final String name;
+  const WorkoutDifficulty(this.name);
 }
