@@ -9,6 +9,11 @@ import 'package:fitness_flex_app/presentation/pages/nutrition_page.dart';
 import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart';
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
 
+// NEW (form checker flow)
+import 'package:fitness_flex_app/features/form_check/form_checker_screen.dart';
+import 'package:fitness_flex_app/features/form_check/form_check_menu_page.dart';
+import 'package:fitness_flex_app/features/form_check/form_check_summary_page.dart';
+
 class AppRouter {
   static const String splash = '/';
   static const String onboarding = '/onboarding';
@@ -21,22 +26,29 @@ class AppRouter {
   static const String progress = '/progress';
   static const String community = '/community';
   static const String settings = '/settings';
-  static const formCheck = '/form-check';
+
+  // Form checker flow
+  static const String formCheckMenu = '/form-check-menu';
+  static const String formCheck = '/form-check';
+  static const String formCheckSummary = '/form-check-summary';
 
   static final NutritionRepository _nutritionRepository = NutritionRepository();
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
-      splash: (context) => const SplashPage(),
-      onboarding: (context) => const OnboardingPage(),
-      login: (context) => const LoginPage(),
-      register: (context) => const RegisterPage(),
-      home: (context) => const HomePage(),
-      workout: (context) => const WorkoutListPage(),
-      nutrition: (context) => const NutritionPage(),
-      '/mealHistory': (context) =>
-          MealHistoryPage(nutritionRepository: _nutritionRepository),
-      // Add other routes as you create the pages
+      splash: (_) => const SplashPage(),
+      onboarding: (_) => const OnboardingPage(),
+      login: (_) => const LoginPage(),
+      register: (_) => const RegisterPage(),
+      home: (_) => const HomePage(),
+      workout: (_) => const WorkoutListPage(),
+      nutrition: (_) => const NutritionPage(),
+      '/mealHistory': (_) => MealHistoryPage(nutritionRepository: _nutritionRepository),
+
+      // NEW (form checker flow)
+      formCheckMenu: (_) => const FormCheckMenuPage(),
+      formCheck: (_) => const FormCheckerScreen(),
+      formCheckSummary: (_) => const FormCheckSummaryPage(),
     };
   }
 }
