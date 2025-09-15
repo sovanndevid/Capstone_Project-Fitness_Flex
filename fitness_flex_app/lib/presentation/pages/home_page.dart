@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:fitness_flex_app/core/themes/app_theme.dart';
 import 'package:fitness_flex_app/navigation/app_router.dart';
+import 'chat_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -88,6 +89,16 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.notifications_none),
             onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.chat),
+            tooltip: 'Chat with Fitness Assistant',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChatScreen()),
+              );
+            },
           ),
           IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
         ],
