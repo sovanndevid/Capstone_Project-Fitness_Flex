@@ -20,7 +20,7 @@ class WorkoutCard extends StatelessWidget {
     required this.calories,
     required this.difficulty,
     required this.onTap,
-    this.isLiked = false,
+    required this.isLiked,
     required this.onLike,
   });
 
@@ -28,13 +28,16 @@ class WorkoutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
+        splashColor: Colors.blue.withOpacity(0.2),
+        highlightColor: Colors.blue.withOpacity(0.1),
+        child: Container(
+          color: Colors.white,
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, // Important for preventing overflow
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -67,7 +70,10 @@ class WorkoutCard extends StatelessWidget {
                       isLiked ? Icons.favorite : Icons.favorite_border,
                       color: isLiked ? Colors.red : null,
                     ),
-                    onPressed: onLike,
+                    onPressed: () {
+                      print('IconButton pressed in WorkoutCard');
+                      onLike();
+                    },
                   ),
                 ],
               ),
@@ -82,34 +88,19 @@ class WorkoutCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
+              Row(
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.timer, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(duration, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                    ],
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.local_fire_department, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text('$calories cal', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                    ],
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.whatshot, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(difficulty, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                    ],
-                  ),
+                  Icon(Icons.timer, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(duration, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                  const SizedBox(width: 16),
+                  Icon(Icons.local_fire_department, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text('$calories cal', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                  const SizedBox(width: 16),
+                  Icon(Icons.whatshot, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(difficulty, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 ],
               ),
             ],
@@ -133,6 +124,7 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
   void _toggleLike(int index) {
     setState(() {
       _isLikedList[index] = !_isLikedList[index];
+      print('Workout $index liked: ${_isLikedList[index]}');
     });
   }
 

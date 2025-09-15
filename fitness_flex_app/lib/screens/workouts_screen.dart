@@ -12,8 +12,10 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
   final List<bool> _isLikedList = [false, false];
 
   void _toggleLike(int index) {
+    print('_toggleLike called for index: $index'); // ADD THIS LINE
     setState(() {
       _isLikedList[index] = !_isLikedList[index];
+      print('Workout $index liked: ${_isLikedList[index]}');
     });
   }
 
