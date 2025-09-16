@@ -31,10 +31,13 @@ class _MealLogPageState extends State<MealLogPage> {
   bool _isSearching = false;
   bool _showCustomFoodForm = false;
 
+  late String _selectedMealType;
+
   @override
   void initState() {
     super.initState();
     _servingController.addListener(_updateNutritionValues);
+    _selectedMealType = widget.mealType;
   }
 
   @override
@@ -124,7 +127,7 @@ class _MealLogPageState extends State<MealLogPage> {
       carbs: carbs,
       fat: fat,
       date: DateTime.now(),
-      mealType: widget.mealType,
+      mealType: _selectedMealType,
       servingSize: servingSize.toInt(),
     );
 
@@ -134,7 +137,7 @@ class _MealLogPageState extends State<MealLogPage> {
     // Show success message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${widget.mealType.capitalize()} logged successfully!'),
+        content: Text('${_selectedMealType.capitalize()} logged successfully!'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -154,7 +157,7 @@ class _MealLogPageState extends State<MealLogPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Log ${widget.mealType.capitalize()}'),
+        title: Text('Log ${_selectedMealType.capitalize()}'),
         actions: [
           if (_selectedFood != null || _showCustomFoodForm)
             IconButton(
@@ -174,6 +177,30 @@ class _MealLogPageState extends State<MealLogPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            DropdownButtonFormField<String>(
+              value: _selectedMealType,
+              decoration: const InputDecoration(
+                labelText: 'Meal Type',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                'breakfast',
+                'lunch',
+                'dinner',
+                'snack',
+              ].map((type) => DropdownMenuItem(
+                value: type,
+                child: Text(type.capitalize()),
+              )).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedMealType = value;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
             // Search Bar and Custom Food Button
             Row(
               children: [

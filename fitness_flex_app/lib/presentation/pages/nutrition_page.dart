@@ -21,6 +21,8 @@ class _NutritionPageState extends State<NutritionPage> {
   late Future<double> _waterSummaryFuture;
   late Future<NutritionGoal> _nutritionGoalFuture;
 
+  String _selectedMealType = 'breakfast'; // <-- Add this line
+
   @override
   void initState() {
     super.initState();
@@ -74,14 +76,39 @@ class _NutritionPageState extends State<NutritionPage> {
               const SizedBox(height: 20),
               _buildWaterTrackingCard(),
               const SizedBox(height: 20),
-              _buildQuickActions(),
+              // --- Replace _buildQuickActions() with this ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  for (var type in ['breakfast', 'lunch', 'dinner', 'snack'])
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedMealType = type;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _selectedMealType == type
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey[300],
+                        foregroundColor: _selectedMealType == type
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      child: Text(type[0].toUpperCase() + type.substring(1)),
+                    ),
+                ],
+              ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Today\'s Meals',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text(
+                    'Today\'s ${_selectedMealType[0].toUpperCase() + _selectedMealType.substring(1)}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   TextButton(
                     onPressed: () {
@@ -99,7 +126,7 @@ class _NutritionPageState extends State<NutritionPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              _buildRecentMealsList(),
+              _buildRecentMealsList(), // We'll filter inside this
             ],
           ),
         ),
@@ -371,58 +398,6 @@ class _NutritionPageState extends State<NutritionPage> {
     );
   }
 
-  Widget _buildQuickActions() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildActionButton(
-          icon: Icons.breakfast_dining,
-          label: 'Breakfast',
-          onTap: () => _navigateToMealLog('breakfast'),
-        ),
-        _buildActionButton(
-          icon: Icons.lunch_dining,
-          label: 'Lunch',
-          onTap: () => _navigateToMealLog('lunch'),
-        ),
-        _buildActionButton(
-          icon: Icons.dinner_dining,
-          label: 'Dinner',
-          onTap: () => _navigateToMealLog('dinner'),
-        ),
-        _buildActionButton(
-          icon: Icons.cake,
-          label: 'Snack',
-          onTap: () => _navigateToMealLog('snack'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: Theme.of(
-            context,
-          ).colorScheme.primary.withOpacity(0.2),
-          child: Icon(
-            icon,
-            color: Theme.of(context).colorScheme.primary,
-            size: 28,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
-    );
-  }
-
   Widget _buildRecentMealsList() {
     return FutureBuilder<List<Meal>>(
       future: _nutritionRepository.getTodayMeals(),
@@ -432,30 +407,40 @@ class _NutritionPageState extends State<NutritionPage> {
         }
 
         final meals = snapshot.data ?? [];
+        final filteredMeals = meals
+            .where((meal) => meal.mealType == _selectedMealType)
+            .toList();
 
         return Column(
           children: [
+            // Add Meal button always visible
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.add),
+                label: Text(
+                  'Add ${_selectedMealType[0].toUpperCase() + _selectedMealType.substring(1)}',
+                ),
+                onPressed: () => _navigateToMealLog(_selectedMealType),
+              ),
+            ),
+            const SizedBox(height: 8),
             // Meals list or empty state
-            if (meals.isEmpty)
+            if (filteredMeals.isEmpty)
               Column(
                 children: [
                   const Icon(Icons.restaurant, size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
-                  const Text(
-                    'No meals logged today',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => _navigateToMealLog('breakfast'),
-                    child: const Text('Log Your First Meal'),
+                  Text(
+                    'No ${_selectedMealType[0].toUpperCase() + _selectedMealType.substring(1)} logged today',
+                    style: const TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(height: 16),
                 ],
               )
             else
               Column(
-                children: meals.map((meal) {
+                children: filteredMeals.map((meal) {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     shape: RoundedRectangleBorder(
@@ -473,9 +458,30 @@ class _NutritionPageState extends State<NutritionPage> {
                       subtitle: Text(
                         '${meal.calories.toStringAsFixed(0)} kcal • ${meal.mealType}',
                       ),
-                      trailing: Text(
-                        '${meal.protein.toStringAsFixed(0)}P ${meal.carbs.toStringAsFixed(0)}C ${meal.fat.toStringAsFixed(0)}F',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${meal.protein.toStringAsFixed(0)}P ${meal.carbs.toStringAsFixed(0)}C ${meal.fat.toStringAsFixed(0)}F',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            tooltip: 'Edit Meal',
+                            onPressed: () {
+                              // You need to implement edit functionality in MealLogPage
+                              _navigateToMealLog(_selectedMealType);
+                            },
+                          ),
+                          // Optional: Add a delete button
+                          // IconButton(
+                          //   icon: const Icon(Icons.delete, color: Colors.red),
+                          //   tooltip: 'Delete Meal',
+                          //   onPressed: () {
+                          //     // Implement delete functionality here
+                          //   },
+                          // ),
+                        ],
                       ),
                     ),
                   );
@@ -541,8 +547,8 @@ class _NutritionPageState extends State<NutritionPage> {
     );
   }
 
-  void _navigateToMealLog(String mealType) {
-    Navigator.push(
+  void _navigateToMealLog(String mealType) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => MealLogPage(
@@ -552,8 +558,6 @@ class _NutritionPageState extends State<NutritionPage> {
         ),
       ),
     );
+    _refreshData(); // <-- This ensures the meal list is refreshed after logging
   }
 }
-
-// test to mains
-
