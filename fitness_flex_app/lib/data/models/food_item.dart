@@ -49,3 +49,30 @@ class FoodItem {
     );
   }
 }
+
+
+extension FoodItemUSDA on FoodItem {
+  static FoodItem fromUSDAJson(Map<String, dynamic> json) {
+    final nutrients = json['foodNutrients'] as List? ?? [];
+
+    double getNutrient(String name) {
+      final nutrient = nutrients.firstWhere(
+        (n) => n['nutrientName'].toString().toLowerCase() == name.toLowerCase(),
+        orElse: () => {"value": 0},
+      );
+      return (nutrient['value'] as num?)?.toDouble() ?? 0.0;
+    }
+
+    return FoodItem(
+      id: json['fdcId'].toString(),
+      name: json['description'] ?? "Unknown",
+      brand: json['brandOwner'] ?? "Generic",
+      calories: getNutrient("Energy"),
+      protein: getNutrient("Protein"),
+      carbs: getNutrient("Carbohydrate, by difference"),
+      fat: getNutrient("Total lipid (fat)"),
+      servingSize: (json['servingSize'] as num?)?.toInt() ?? 100,
+      servingUnit: json['servingSizeUnit'] ?? "g",
+    );
+  }
+}
