@@ -16,6 +16,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final ImagePicker _picker = ImagePicker();
   final ScrollController _scrollController = ScrollController();
 
+  File? _pendingImage; // <-- Store image until send
+
   @override
   void initState() {
     super.initState();
@@ -24,9 +26,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _handleSendMessage() async {
     String text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && _pendingImage == null) return;
 
-    _addMessage(text, true);
+    // Add user message (text and/or image)
+    if (_pendingImage != null) {
+      _addImageMessage(_pendingImage!);
+    }
+    if (text.isNotEmpty) {
+      _addMessage(text, true);
+    }
     _messageController.clear();
     _scrollToBottom();
 
@@ -35,10 +43,21 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _scrollToBottom();
 
-    String? aiResponse = await _askAI(text);
+    String? aiResponse;
+    if (_pendingImage != null) {
+      final bytes = await _pendingImage!.readAsBytes();
+      final base64Image = base64Encode(bytes);
+      aiResponse = await _askAI(
+        text.isEmpty ? "What food is this and how many calories?" : text,
+        imageBase64: base64Image,
+      );
+    } else {
+      aiResponse = await _askAI(text);
+    }
 
     setState(() {
       _messages.removeLast();
+      _pendingImage = null; // Clear after sending
     });
 
     if (aiResponse != null) {
@@ -51,33 +70,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 85);
     if (image == null) return;
 
-    // Show image in chat
-    _addImageMessage(File(image.path));
-    _scrollToBottom();
-
-    // Convert image to base64
-    final bytes = await File(image.path).readAsBytes();
-    final base64Image = base64Encode(bytes);
-
     setState(() {
-      _messages.add(ChatMessage(isUser: false, isTyping: true));
+      _pendingImage = File(image.path);
     });
-    _scrollToBottom();
-
-    // Send to backend with base64
-    String? aiResponse = await _askAI(
-      "What food is this and how many calories?",
-      imageBase64: base64Image,
-    );
-
-    setState(() {
-      _messages.removeLast();
-    });
-
-    if (aiResponse != null) {
-      _addMessage(aiResponse, false);
-      _scrollToBottom();
-    }
   }
 
   Future<String?> _askAI(String message, {String? imageBase64}) async {
@@ -323,55 +318,82 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          PopupMenuButton<ImageSource>(
-            icon: Icon(Icons.add_circle, color: Colors.blue[600]),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: ImageSource.camera,
-                child: Row(
-                  children: [
-                    Icon(Icons.camera_alt, size: 20),
-                    SizedBox(width: 8),
-                    Text('Take Photo'),
-                  ],
+          if (_pendingImage != null)
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    _pendingImage!,
+                    height: 60,
+                    width: 60,
+                    fit: BoxFit.cover,
+                  ),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      _pendingImage = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          Row(
+            children: [
+              PopupMenuButton<ImageSource>(
+                icon: Icon(Icons.add_circle, color: Colors.blue[600]),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: ImageSource.camera,
+                    child: Row(
+                      children: [
+                        Icon(Icons.camera_alt, size: 20),
+                        SizedBox(width: 8),
+                        Text('Take Photo'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: ImageSource.gallery,
+                    child: Row(
+                      children: [
+                        Icon(Icons.photo_library, size: 20),
+                        SizedBox(width: 8),
+                        Text('Choose from Gallery'),
+                      ],
+                    ),
+                  ),
+                ],
+                onSelected: _handleSendImage,
               ),
-              const PopupMenuItem(
-                value: ImageSource.gallery,
-                child: Row(
-                  children: [
-                    Icon(Icons.photo_library, size: 20),
-                    SizedBox(width: 8),
-                    Text('Choose from Gallery'),
-                  ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: "Ask Coach AI about nutrition or workouts...",
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      suffixIcon: IconButton(
+                        icon: Icon(Icons.send, color: Colors.blue[600]),
+                        onPressed: _handleSendMessage,
+                      ),
+                    ),
+                    onSubmitted: (_) => _handleSendMessage(),
+                  ),
                 ),
               ),
             ],
-            onSelected: _handleSendImage,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: TextField(
-                controller: _messageController,
-                decoration: InputDecoration(
-                  hintText: "Ask Coach AI about nutrition or workouts...",
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.send, color: Colors.blue[600]),
-                    onPressed: _handleSendMessage,
-                  ),
-                ),
-                onSubmitted: (_) => _handleSendMessage(),
-              ),
-            ),
           ),
         ],
       ),
