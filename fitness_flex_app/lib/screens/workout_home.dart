@@ -14,10 +14,10 @@ class _WorkoutHomeScreenState extends State<WorkoutHomeScreen> {
 
   // This function toggles the like state for a specific workout
   void _toggleLike(int index) {
-    print('_toggleLike called for workout $index'); // ADD THIS LINE
+    print('_toggleLike called for workout $index');
     setState(() {
       _isLikedList[index] = !_isLikedList[index];
-      print('Workout $index liked: ${_isLikedList[index]}'); // ADD THIS LINE TOO
+      print('Workout $index liked: ${_isLikedList[index]}');
     });
   }
 
@@ -31,27 +31,29 @@ class _WorkoutHomeScreenState extends State<WorkoutHomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Workout Cards - MAKE SURE YOU PASS THE CORRECT PARAMETERS!
+            // Workout Cards - now passing INT values
             WorkoutCard(
               title: "Full Body Strength",
               category: "Strength Training",
-              description: "Complete full body workout targeting all major muscle groups with compound exercises",
-              duration: "45 min",
-              calories: "320",
+              description:
+                  "Complete full body workout targeting all major muscle groups with compound exercises",
+              duration: 45, // ✅ integer
+              calories: 320, // ✅ integer
               difficulty: "Intermediate",
-              isLiked: _isLikedList[0], // Pass the current state
-              onLike: () => _toggleLike(0), // Pass the function to call
+              isLiked: _isLikedList[0],
+              onLike: () => _toggleLike(0),
               onTap: () {},
             ),
             WorkoutCard(
               title: "Morning Yoga Flow",
               category: "Yoga & Flexibility",
-              description: "Gentle yoga routine to start your day with stretching and breathing",
-              duration: "30 min",
-              calories: "180",
+              description:
+                  "Gentle yoga routine to start your day with stretching and breathing",
+              duration: 30, // ✅ integer
+              calories: 180, // ✅ integer
               difficulty: "Beginner",
-              isLiked: _isLikedList[1], // Pass the current state
-              onLike: () => _toggleLike(1), // Pass the function to call
+              isLiked: _isLikedList[1],
+              onLike: () => _toggleLike(1),
               onTap: () {},
             ),
           ],

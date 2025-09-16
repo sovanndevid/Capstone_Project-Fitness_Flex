@@ -12,7 +12,7 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
   final List<bool> _isLikedList = [false, false];
 
   void _toggleLike(int index) {
-    print('_toggleLike called for index: $index'); // ADD THIS LINE
+    print('_toggleLike called for index: $index');
     setState(() {
       _isLikedList[index] = !_isLikedList[index];
       print('Workout $index liked: ${_isLikedList[index]}');
@@ -71,8 +71,8 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
               category: "Strength Training",
               description:
                   "Complete full body workout targeting all major muscle groups with compound exercises",
-              duration: "45 min",
-              calories: "320",
+              duration: 45,   // ✅ integer
+              calories: 320,  // ✅ integer
               difficulty: "Intermediate",
               isLiked: _isLikedList[0],
               onLike: () => _toggleLike(0),
@@ -83,8 +83,8 @@ class _WorkoutsScreenState extends State<WorkoutsScreen> {
               category: "Yoga & Flexibility",
               description:
                   "Gentle yoga routine to start your day with stretching and breathing",
-              duration: "30 min",
-              calories: "180",
+              duration: 30,   // ✅ integer
+              calories: 180,  // ✅ integer
               difficulty: "Beginner",
               isLiked: _isLikedList[1],
               onLike: () => _toggleLike(1),

@@ -9,6 +9,15 @@ import 'package:fitness_flex_app/presentation/pages/nutrition_page.dart';
 import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart';
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
 
+// ✅ Import form check feature pages
+import 'package:fitness_flex_app/features/form_check/form_check_menu_page.dart';
+import 'package:fitness_flex_app/features/form_check/form_checker_screen.dart';
+import 'package:fitness_flex_app/features/form_check/form_check_summary_page.dart';
+
+// ✅ Import workout screens if you want them in routes
+import 'package:fitness_flex_app/screens/workout_home.dart';
+import 'package:fitness_flex_app/screens/workouts_screen.dart';
+
 class AppRouter {
   static const String splash = '/';
   static const String onboarding = '/onboarding';
@@ -21,7 +30,11 @@ class AppRouter {
   static const String progress = '/progress';
   static const String community = '/community';
   static const String settings = '/settings';
-  static const formCheck = '/form-check';
+
+  // ✅ Form check routes
+  static const String formCheckMenu = '/form-check-menu';
+  static const String formCheck = '/form-check';
+  static const String formCheckSummary = '/form-check-summary';
 
   static final NutritionRepository _nutritionRepository = NutritionRepository();
 
@@ -34,9 +47,10 @@ class AppRouter {
       home: (_) => const HomePage(),
       workout: (_) => const WorkoutListPage(),
       nutrition: (_) => const NutritionPage(),
-      '/mealHistory': (_) => MealHistoryPage(nutritionRepository: _nutritionRepository),
+      '/mealHistory': (_) =>
+          MealHistoryPage(nutritionRepository: _nutritionRepository),
 
-      // NEW (form checker flow)
+      // ✅ Form checker pages
       formCheckMenu: (_) => const FormCheckMenuPage(),
       formCheck: (_) => const FormCheckerScreen(),
       formCheckSummary: (_) => const FormCheckSummaryPage(),
@@ -45,10 +59,9 @@ class AppRouter {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
-      // ... your other routes
-      case workouts:
-        return MaterialPageRoute(builder: (_) => const WorkoutHomeScreen());
-      // ... your other routes
+      case workout:
+        // You can swap WorkoutListPage with WorkoutHome or WorkoutsScreen if you prefer
+        return MaterialPageRoute(builder: (_) => const WorkoutListPage());
       default:
         return MaterialPageRoute(builder: (_) => const SplashPage());
     }
