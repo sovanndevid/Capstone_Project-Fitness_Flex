@@ -19,7 +19,6 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // Add welcome message
     _addMessage("Hey there! I'm Coach AI 💪\nWhat's your fitness goal today?", false);
   }
 
@@ -31,18 +30,17 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.clear();
     _scrollToBottom();
 
-    // Simulate typing indicator
     setState(() {
       _messages.add(ChatMessage(isUser: false, isTyping: true));
     });
     _scrollToBottom();
 
     String? aiResponse = await _askAI(text);
-    
+
     setState(() {
-      _messages.removeLast(); // Remove typing indicator
+      _messages.removeLast();
     });
-    
+
     if (aiResponse != null) {
       _addMessage(aiResponse, false);
       _scrollToBottom();
@@ -53,41 +51,61 @@ class _ChatScreenState extends State<ChatScreen> {
     final XFile? image = await _picker.pickImage(source: source, imageQuality: 85);
     if (image == null) return;
 
+    // Show image in chat
     _addImageMessage(File(image.path));
     _scrollToBottom();
 
-    // Simulate typing indicator
+    // Convert image to base64
+    final bytes = await File(image.path).readAsBytes();
+    final base64Image = base64Encode(bytes);
+
     setState(() {
       _messages.add(ChatMessage(isUser: false, isTyping: true));
     });
     _scrollToBottom();
 
-    // TODO: Replace with actual image analysis
-    String? aiResponse = await _askAI("I just uploaded a food image. What's in it and how many calories?");
-    
+    // Send to backend with base64
+    String? aiResponse = await _askAI(
+      "What food is this and how many calories?",
+      imageBase64: base64Image,
+    );
+
     setState(() {
       _messages.removeLast();
     });
-    
+
     if (aiResponse != null) {
       _addMessage(aiResponse, false);
       _scrollToBottom();
     }
   }
 
-  Future<String?> _askAI(String message) async {
+  Future<String?> _askAI(String message, {String? imageBase64}) async {
     try {
       final HttpClientRequest request = await HttpClient().postUrl(
         Uri.parse("https://studybuddy-backend-git-main-sovanndevidnong-admins-projects.vercel.app/api/chat"),
       );
       request.headers.contentType = ContentType.json;
-      request.write(jsonEncode({'message': message}));
-      
+
+      request.write(jsonEncode({
+        'message': message,
+        if (imageBase64 != null) 'imageBase64': imageBase64,
+      }));
+
       final HttpClientResponse response = await request.close();
       final String jsonResponse = await response.transform(utf8.decoder).join();
       final Map<String, dynamic> decoded = jsonDecode(jsonResponse);
-      
-      return decoded['reply'] ?? "Sorry, I couldn't process that.";
+
+      if (decoded.containsKey('food')) {
+        return "Food: ${decoded['food']}\n"
+               "Calories: ${decoded['calories']} kcal\n"
+               "Protein: ${decoded['protein_g']}g\n"
+               "Carbs: ${decoded['carbs_g']}g\n"
+               "Fat: ${decoded['fat_g']}g\n"
+               "Notes: ${decoded['notes']}";
+      } else {
+        return decoded['reply'] ?? "Sorry, I couldn't process that.";
+      }
     } catch (err) {
       return "Network error. Please check your connection.";
     }
@@ -280,33 +298,10 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.only(right: 4),
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.only(right: 4),
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+              children: const [
+                _Dot(),
+                _Dot(),
+                _Dot(),
               ],
             ),
           ),
@@ -396,4 +391,21 @@ class ChatMessage {
     required this.isUser,
     this.isTyping = false,
   });
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      margin: const EdgeInsets.only(right: 4),
+      decoration: const BoxDecoration(
+        color: Colors.blue,
+        shape: BoxShape.circle,
+      ),
+    );
+  }
 }
