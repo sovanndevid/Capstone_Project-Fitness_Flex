@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:fitness_flex_app/navigation/app_router.dart';
 
 class FormCheckerScreen extends StatefulWidget {
   const FormCheckerScreen({super.key});
@@ -15,6 +16,9 @@ class FormCheckerScreen extends StatefulWidget {
 class _FormCheckerScreenState extends State<FormCheckerScreen> {
   CameraController? _cam;
   late PoseDetector _poseDetector;
+
+  // nav/context
+  String _exerciseName = 'Exercise';
 
   // live state
   bool _busy = false;
@@ -43,11 +47,22 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     'Go deeper (hip below knee)': 0,
     'Control knees over toes': 0,
   };
+  final List<String> _timeline = []; // 'G' or 'B' per scored frame
 
   @override
   void initState() {
     super.initState();
     _poseDetector = PoseDetector(options: PoseDetectorOptions());
+
+    // Read route args after first frame so ModalRoute is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args =
+          (ModalRoute.of(context)?.settings.arguments ?? {}) as Map<dynamic, dynamic>;
+      setState(() {
+        _exerciseName = (args['exercise'] ?? 'Exercise') as String;
+      });
+    });
+
     _initCamera();
   }
 
@@ -134,6 +149,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     try {
       final plane = img.planes.first;
 
+      // use sensor orientation; portrait-only MVP
       final rotation = InputImageRotationValue.fromRawValue(
             _cam?.description.sensorOrientation ?? 0,
           ) ??
@@ -158,11 +174,11 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       final lm = poses.first.landmarks;
 
       final S = lm[PoseLandmarkType.leftShoulder];
-      final H = lm[PoseLandmarkType.leftHip];
+      final Hh = lm[PoseLandmarkType.leftHip];
       final K = lm[PoseLandmarkType.leftKnee];
       final A = lm[PoseLandmarkType.leftAnkle];
       final T = lm[PoseLandmarkType.leftFootIndex];
-      if (S == null || H == null || K == null || A == null || T == null) {
+      if (S == null || Hh == null || K == null || A == null || T == null) {
         _busy = false;
         return;
       }
@@ -173,34 +189,41 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       double ny(double v) => v / Ht;
 
       final s = _smooth('s', nx(S.x), ny(S.y), alpha: 0.45);
-      final h = _smooth('h', nx(H.x), ny(H.y), alpha: 0.45);
+      final h = _smooth('h', nx(Hh.x), ny(Hh.y), alpha: 0.45);
       final k = _smooth('k', nx(K.x), ny(K.y), alpha: 0.45);
       final a = _smooth('a', nx(A.x), ny(A.y), alpha: 0.45);
       final t = _smooth('t', nx(T.x), ny(T.y), alpha: 0.45);
 
       // posture checks
       final backAng = _angle(s, h, a); // shoulder-hip-ankle
-      final depth = (h.dy - k.dy);     // positive means hip below knee
+      final depth = (h.dy - k.dy);     // + means hip below knee (image y grows downward)
       final depthOk = depth > 0.015;   // ~1.5% of frame height
       final shinLen = (k - a).distance.clamp(1e-6, 1.0);
       final kneeOverToe = (k.dx - t.dx) > 0.25 * shinLen;
 
-      final good = (backAng >= 155) && depthOk && !kneeOverToe;
+      final backOk  = backAng >= 155;
+      final kneeOk  = !kneeOverToe;
+      final good    = backOk && depthOk && kneeOk;
 
       String cue = '';
-      if (backAng < 155) {
+      if (!backOk) {
         cue = 'Keep chest up / back straighter';
       } else if (!depthOk) {
         cue = 'Go deeper (hip below knee)';
-      } else if (kneeOverToe) {
+      } else if (!kneeOk) {
         cue = 'Control knees over toes';
       }
 
       // summary counters
       _totalFrames++;
-      if (good) _goodFrames++;
-      if (cue.isNotEmpty && _cueCounts.containsKey(cue)) {
-        _cueCounts[cue] = (_cueCounts[cue] ?? 0) + 1;
+      if (good) {
+        _goodFrames++;
+        _timeline.add('G');
+      } else {
+        _timeline.add('B');
+        if (cue.isNotEmpty && _cueCounts.containsKey(cue)) {
+          _cueCounts[cue] = (_cueCounts[cue] ?? 0) + 1;
+        }
       }
 
       _updateRepState(depth);
@@ -246,101 +269,29 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     }
   }
 
-  void _endSession() async {
+  Future<void> _endSession() async {
     try {
       if (_cam != null && _cam!.value.isStreamingImages) {
         await _cam!.stopImageStream();
       }
     } catch (_) {}
 
-    final total = _totalFrames == 0 ? 1 : _totalFrames;
-    final goodPct =
-        ((_goodFrames / total) * 100).clamp(0, 100).toStringAsFixed(0);
-
-    String topCue = '—';
-    int topCount = 0;
-    _cueCounts.forEach((k, v) {
-      if (v > topCount) {
-        topCount = v;
-        topCue = k;
-      }
-    });
-
+    // Navigate straight to summary page
     if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: false,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 4,
-                width: 48,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const Text(
-                'Session Summary',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const Icon(Icons.repeat, size: 20),
-                  const SizedBox(width: 8),
-                  Text('Total reps: $_reps',
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.check_circle, size: 20),
-                  const SizedBox(width: 8),
-                  Text('Good-form time: $goodPct%',
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.tips_and_updates, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Most frequent cue: $topCue',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.pop(context); // close summary
-                    Navigator.pop(context); // leave form screen
-                  },
-                  child: const Text('Done'),
-                ),
-              ),
-            ],
-          ),
-        );
+    Navigator.pushNamed(
+      context,
+      AppRouter.formCheckSummary,
+      arguments: {
+        'exercise': _exerciseName,
+        'reps': _reps,
+        'goodFrames': _goodFrames,
+        'scoredFrames': _totalFrames,
+        'fails': {
+          'back': _cueCounts['Keep chest up / back straighter'] ?? 0,
+          'depth': _cueCounts['Go deeper (hip below knee)'] ?? 0,
+          'knee':  _cueCounts['Control knees over toes'] ?? 0,
+        },
+        'timeline': _timeline.take(200).toList(), // cap for UI
       },
     );
   }
@@ -357,19 +308,18 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                 // camera
                 CameraPreview(_cam!),
 
-                // small top-left rep counter
+                // top-left exercise + reps badge
                 Positioned(
                   left: 16,
                   top: 48,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      'SQUAT • Reps: $_reps',
+                      '$_exerciseName • Reps: $_reps',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -390,29 +340,28 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                   ),
                 ),
 
-                // BIG bottom coaching panel (the empty space in your screenshot)
+                // bottom coaching panel
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
-                    height:
-                        MediaQuery.of(context).size.height * 0.28, // ~28% screen
+                    height: MediaQuery.of(context).size.height * 0.28, // ~28% screen
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.92),
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                       boxShadow: const [
                         BoxShadow(
-                            blurRadius: 16,
-                            color: Colors.black26,
-                            offset: Offset(0, -4)),
+                          blurRadius: 16,
+                          color: Colors.black26,
+                          offset: Offset(0, -4),
+                        ),
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // main coaching text (BIG)
+                        // main coaching text
                         Expanded(
                           child: Center(
                             child: Text(
@@ -421,11 +370,9 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                                   : _cue,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 22, // make 26–28 if you want bigger
+                                fontSize: 22,
                                 fontWeight: FontWeight.w700,
-                                color: _good
-                                    ? Colors.green[700]
-                                    : Colors.red[700],
+                                color: _good ? Colors.green[700] : Colors.red[700],
                                 height: 1.2,
                               ),
                             ),
@@ -433,31 +380,23 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                         ),
                         const SizedBox(height: 6),
 
-                        // small status + reps
+                        // tiny status + reps
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
                                 Icon(
-                                  _good
-                                      ? Icons.check_circle
-                                      : Icons.error_rounded,
-                                  color: _good
-                                      ? Colors.green
-                                      : Colors.red,
+                                  _good ? Icons.check_circle : Icons.error_rounded,
+                                  color: _good ? Colors.green : Colors.red,
                                   size: 18,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  _good
-                                      ? 'Good form'
-                                      : 'Needs adjustment',
+                                  _good ? 'Good form' : 'Needs adjustment',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: _good
-                                        ? Colors.green[800]
-                                        : Colors.red[800],
+                                    color: _good ? Colors.green[800] : Colors.red[800],
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -493,4 +432,3 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     );
   }
 }
-//test commit #2
