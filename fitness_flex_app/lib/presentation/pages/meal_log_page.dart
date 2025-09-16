@@ -174,98 +174,100 @@ class _MealLogPageState extends State<MealLogPage> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+  padding: const EdgeInsets.all(16),
+  child: SingleChildScrollView(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Meal type dropdown
+        DropdownButtonFormField<String>(
+          value: _selectedMealType,
+          decoration: const InputDecoration(
+            labelText: 'Meal Type',
+            border: OutlineInputBorder(),
+          ),
+          items: ['breakfast', 'lunch', 'dinner', 'snack']
+              .map((type) => DropdownMenuItem(
+                    value: type,
+                    child: Text(type.capitalize()),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() => _selectedMealType = value);
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Search Bar and Custom Food Button
+        Row(
           children: [
-            DropdownButtonFormField<String>(
-              value: _selectedMealType,
-              decoration: const InputDecoration(
-                labelText: 'Meal Type',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                'breakfast',
-                'lunch',
-                'dinner',
-                'snack',
-              ].map((type) => DropdownMenuItem(
-                value: type,
-                child: Text(type.capitalize()),
-              )).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedMealType = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            // Search Bar and Custom Food Button
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      labelText: 'Search food',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                _searchResults = [];
-                              },
-                            )
-                          : null,
-                    ),
-                    onChanged: _searchFood,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(
-                    _showCustomFoodForm ? Icons.search : Icons.add,
-                    color: _showCustomFoodForm
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
-                  ),
-                  onPressed: _toggleCustomFoodForm,
-                  tooltip: _showCustomFoodForm
-                      ? 'Search food'
-                      : 'Add custom food',
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Custom Food Form (when enabled)
-            if (_showCustomFoodForm) _buildCustomFoodForm(),
-
-            // Search Results or Selected Food
             Expanded(
-              child: _selectedFood == null && !_showCustomFoodForm
-                  ? _buildSearchResults()
-                  : _selectedFood != null
-                  ? _buildFoodDetails()
-                  : const SizedBox(),
-            ),
-
-            // Log Button (only show when food is selected or custom form is filled)
-            if (_selectedFood != null || _showCustomFoodForm) ...[
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _logMeal,
-                  child: const Text('Log Meal'),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  labelText: 'Search food',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchResults = []);
+                          },
+                        )
+                      : null,
                 ),
+                onChanged: _searchFood,
               ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(
+                _showCustomFoodForm ? Icons.search : Icons.add,
+                color: _showCustomFoodForm
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
+              onPressed: _toggleCustomFoodForm,
+              tooltip:
+                  _showCustomFoodForm ? 'Search food' : 'Add custom food',
+            ),
           ],
         ),
-      ),
+        const SizedBox(height: 20),
+
+        // Custom Food Form
+        if (_showCustomFoodForm) _buildCustomFoodForm(),
+
+        // Search Results or Food Details
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: _selectedFood == null && !_showCustomFoodForm
+              ? _buildSearchResults()
+              : _selectedFood != null
+                  ? _buildFoodDetails()
+                  : const SizedBox(),
+        ),
+
+        // Log Button
+        if (_selectedFood != null || _showCustomFoodForm) ...[
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _logMeal,
+              child: const Text('Log Meal'),
+            ),
+          ),
+        ],
+      ],
+    ),
+  ),
+),
     );
   }
 
