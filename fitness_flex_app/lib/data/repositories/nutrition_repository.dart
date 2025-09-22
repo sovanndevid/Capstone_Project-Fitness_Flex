@@ -5,37 +5,14 @@ import 'package:fitness_flex_app/data/models/meal.dart';
 import 'package:fitness_flex_app/data/models/water_intake.dart';
 import 'package:fitness_flex_app/data/models/nutrition_goal.dart';
 import 'package:fitness_flex_app/data/models/food_item.dart';
+import 'package:fitness_flex_app/data/models/usda_service.dart';
+import 'package:fitness_flex_app/data/models/ausnut_service.dart';
 
-/// Extension to map USDA API results into FoodItem
-extension FoodItemUSDA on FoodItem {
-  static FoodItem fromUSDAJson(Map<String, dynamic> json) {
-    final nutrients = json['foodNutrients'] as List? ?? [];
-
-    double getNutrient(String name) {
-      final nutrient = nutrients.firstWhere(
-        (n) => n['nutrientName'].toString().toLowerCase() == name.toLowerCase(),
-        orElse: () => {"value": 0},
-      );
-      return (nutrient['value'] as num?)?.toDouble() ?? 0.0;
-    }
-
-    return FoodItem(
-      id: json['fdcId'].toString(),
-      name: json['description'] ?? "Unknown",
-      brand: json['brandOwner'] ?? "Generic",
-      calories: getNutrient("Energy"),
-      protein: getNutrient("Protein"),
-      carbs: getNutrient("Carbohydrate, by difference"),
-      fat: getNutrient("Total lipid (fat)"),
-      servingSize: (json['servingSize'] as num?)?.toInt() ?? 100,
-      servingUnit: json['servingSizeUnit'] ?? "g",
-    );
-  }
-}
-
+/// --- Main Repository ---
 class NutritionRepository {
-  static const String _usdaApiKey = "Akb8A33VjAPLOBkB6qcaC4tzBBhStuHK7xum8jb8"; 
-  static const String _baseUrl =
+  static const String _usdaApiKey =
+      "Akb8A33VjAPLOBkB6qcaC4tzBBhStuHK7xum8jb8";
+  static const String _usdaBaseUrl =
       "https://api.nal.usda.gov/fdc/v1/foods/search";
 
   final List<Meal> _meals = [];
@@ -48,24 +25,38 @@ class NutritionRepository {
     dailyWater: 2.5,
   );
 
-  /// 🔹 Search foods using USDA API
+  /// 🔹 Search foods using BOTH USDA + AUSNUT APIs
   Future<List<FoodItem>> searchFood(String query) async {
     if (query.isEmpty) return [];
 
-    final response = await http.get(
-      Uri.parse("$_baseUrl?query=$query&pageSize=10&api_key=$_usdaApiKey"),
-    );
+    final List<FoodItem> results = [];
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final foods = data['foods'] as List? ?? [];
-      return foods.map((f) => FoodItemUSDA.fromUSDAJson(f)).toList();
-    } else {
-      throw Exception("USDA API error: ${response.statusCode}");
+    // --- USDA search ---
+    try {
+      final usdaResponse = await http.get(
+        Uri.parse("$_usdaBaseUrl?query=$query&pageSize=10&api_key=$_usdaApiKey"),
+      );
+      if (usdaResponse.statusCode == 200) {
+        final data = jsonDecode(usdaResponse.body);
+        final foods = data['foods'] as List? ?? [];
+        results.addAll(foods.map((f) => FoodItemUSDA.fromUSDAJson(f)).toList());
+      }
+    } catch (e) {
+      print("⚠️ USDA search failed: $e");
     }
+
+    // --- AUSNUT search ---
+    try {
+      final ausnutFoods = await AUSNUTService.searchFoods(query);
+      results.addAll(ausnutFoods);
+    } catch (e) {
+      print("⚠️ AUSNUT search failed: $e");
+    }
+
+    return results;
   }
 
-  /// 🔹 Add meal (local, in-memory for now)
+  /// 🔹 Add meal
   Future<void> addMeal(Meal meal) async {
     await Future.delayed(const Duration(milliseconds: 200));
     _meals.add(meal);

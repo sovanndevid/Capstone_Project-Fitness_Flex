@@ -3,6 +3,7 @@ import 'package:fitness_flex_app/data/models/meal.dart';
 import 'package:fitness_flex_app/data/models/food_item.dart';
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
 import 'package:fitness_flex_app/core/utils/string_extensions.dart';
+import 'package:fitness_flex_app/data/models/ausnut_service.dart';
 
 class MealLogPage extends StatefulWidget {
   final NutritionRepository nutritionRepository;
@@ -22,10 +23,10 @@ class MealLogPage extends StatefulWidget {
 
 class _MealLogPageState extends State<MealLogPage> {
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _servingController = TextEditingController(
-    text: '1',
-  );
+  final TextEditingController _servingController =
+      TextEditingController(text: '1');
   final TextEditingController _customFoodController = TextEditingController();
+
   List<FoodItem> _searchResults = [];
   FoodItem? _selectedFood;
   bool _isSearching = false;
@@ -52,6 +53,28 @@ class _MealLogPageState extends State<MealLogPage> {
     setState(() {});
   }
 
+  /// 🔹 Enrich AUSNUT search results with details in background
+Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
+  for (final food in foods) {
+    if (food.source == "AUSNUT" && food.calories == 0) {
+      try {
+        final details = await AUSNUTService.getFoodDetails(food.id);
+        if (mounted) {
+          setState(() {
+            final index = _searchResults.indexWhere((f) => f.id == food.id);
+            if (index != -1) {
+              _searchResults[index] = details;
+            }
+          });
+        }
+      } catch (e) {
+        print("⚠️ Failed to enrich AUSNUT food: $e");
+      }
+    }
+  }
+}
+
+
   void _searchFood(String query) async {
     if (query.isEmpty) {
       setState(() {
@@ -66,10 +89,38 @@ class _MealLogPageState extends State<MealLogPage> {
     });
 
     final results = await widget.nutritionRepository.searchFood(query);
+
+    // 🔹 Client-side relevance sorting
+    final lowerQuery = query.toLowerCase();
+    results.sort((a, b) {
+      final aName = a.name.toLowerCase();
+      final bName = b.name.toLowerCase();
+
+      // 1. Exact startsWith match first
+      if (aName.startsWith(lowerQuery) && !bName.startsWith(lowerQuery)) {
+        return -1;
+      }
+      if (!aName.startsWith(lowerQuery) && bName.startsWith(lowerQuery)) {
+        return 1;
+      }
+
+      // 2. Word contains
+      if (aName.contains(" $lowerQuery") &&
+          !bName.contains(" $lowerQuery")) return -1;
+      if (!aName.contains(" $lowerQuery") &&
+          bName.contains(" $lowerQuery")) return 1;
+
+      // 3. Fallback alphabetical
+      return aName.compareTo(bName);
+    });
+
     setState(() {
       _searchResults = results;
       _isSearching = false;
     });
+
+    // 🔹 Enrich AUSNUT results after sorting
+    _enrichAUSNUTResults(results);
   }
 
   void _selectFood(FoodItem food) {
@@ -98,17 +149,14 @@ class _MealLogPageState extends State<MealLogPage> {
     double calories, protein, carbs, fat;
 
     if (_showCustomFoodForm) {
-      // Custom food
       mealName = _customFoodController.text.isNotEmpty
           ? _customFoodController.text
           : 'Custom Meal';
-      // Default nutrition values for custom food
       calories = 200 * servingSize;
       protein = 15 * servingSize;
       carbs = 25 * servingSize;
       fat = 8 * servingSize;
     } else {
-      // Database food
       final servingFactor = servingSize / _selectedFood!.servingSize;
       mealName = _selectedFood!.name;
       calories = _selectedFood!.calories * servingFactor;
@@ -120,7 +168,9 @@ class _MealLogPageState extends State<MealLogPage> {
     final meal = Meal(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: mealName,
-      description: _showCustomFoodForm ? 'Custom food' : _selectedFood!.brand,
+      description: _showCustomFoodForm
+          ? 'Custom food'
+          : '${_selectedFood!.brand} (${_selectedFood!.source})',
       imageUrl: '🍽️',
       calories: calories,
       protein: protein,
@@ -134,7 +184,6 @@ class _MealLogPageState extends State<MealLogPage> {
     await widget.nutritionRepository.addMeal(meal);
     widget.onMealAdded();
 
-    // Show success message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${_selectedMealType.capitalize()} logged successfully!'),
@@ -142,7 +191,6 @@ class _MealLogPageState extends State<MealLogPage> {
       ),
     );
 
-    // Clear form but stay on the page to log another meal
     setState(() {
       _selectedFood = null;
       _showCustomFoodForm = false;
@@ -174,100 +222,96 @@ class _MealLogPageState extends State<MealLogPage> {
         ],
       ),
       body: Padding(
-  padding: const EdgeInsets.all(16),
-  child: SingleChildScrollView(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Meal type dropdown
-        DropdownButtonFormField<String>(
-          value: _selectedMealType,
-          decoration: const InputDecoration(
-            labelText: 'Meal Type',
-            border: OutlineInputBorder(),
-          ),
-          items: ['breakfast', 'lunch', 'dinner', 'snack']
-              .map((type) => DropdownMenuItem(
-                    value: type,
-                    child: Text(type.capitalize()),
-                  ))
-              .toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() => _selectedMealType = value);
-            }
-          },
-        ),
-        const SizedBox(height: 16),
-
-        // Search Bar and Custom Food Button
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  labelText: 'Search food',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchResults = []);
-                          },
-                        )
-                      : null,
+        padding: const EdgeInsets.all(16),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DropdownButtonFormField<String>(
+                value: _selectedMealType,
+                decoration: const InputDecoration(
+                  labelText: 'Meal Type',
+                  border: OutlineInputBorder(),
                 ),
-                onChanged: _searchFood,
+                items: ['breakfast', 'lunch', 'dinner', 'snack']
+                    .map((type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type.capitalize()),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedMealType = value);
+                  }
+                },
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: Icon(
-                _showCustomFoodForm ? Icons.search : Icons.add,
-                color: _showCustomFoodForm
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Search food',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchResults = []);
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: _searchFood,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(
+                      _showCustomFoodForm ? Icons.search : Icons.add,
+                      color: _showCustomFoodForm
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    onPressed: _toggleCustomFoodForm,
+                    tooltip: _showCustomFoodForm
+                        ? 'Search food'
+                        : 'Add custom food',
+                  ),
+                ],
               ),
-              onPressed: _toggleCustomFoodForm,
-              tooltip:
-                  _showCustomFoodForm ? 'Search food' : 'Add custom food',
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-        // Custom Food Form
-        if (_showCustomFoodForm) _buildCustomFoodForm(),
+              if (_showCustomFoodForm) _buildCustomFoodForm(),
 
-        // Search Results or Food Details
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.5,
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.5,
+                ),
+                child: _selectedFood == null && !_showCustomFoodForm
+                    ? _buildSearchResults()
+                    : _selectedFood != null
+                        ? _buildFoodDetails()
+                        : const SizedBox(),
+              ),
+
+              if (_selectedFood != null || _showCustomFoodForm) ...[
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _logMeal,
+                    child: const Text('Log Meal'),
+                  ),
+                ),
+              ],
+            ],
           ),
-          child: _selectedFood == null && !_showCustomFoodForm
-              ? _buildSearchResults()
-              : _selectedFood != null
-                  ? _buildFoodDetails()
-                  : const SizedBox(),
         ),
-
-        // Log Button
-        if (_selectedFood != null || _showCustomFoodForm) ...[
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _logMeal,
-              child: const Text('Log Meal'),
-            ),
-          ),
-        ],
-      ],
-    ),
-  ),
-),
+      ),
     );
   }
 
@@ -375,7 +419,7 @@ class _MealLogPageState extends State<MealLogPage> {
             leading: const Icon(Icons.restaurant),
             title: Text(food.name),
             subtitle: Text(
-              '${food.calories} kcal per ${food.servingSize}${food.servingUnit}',
+              "${food.calories} kcal per ${food.servingSize}${food.servingUnit}\nSource: ${food.source}",
             ),
             trailing: Text(
               '${food.protein}P ${food.carbs}C ${food.fat}F',
@@ -400,16 +444,16 @@ class _MealLogPageState extends State<MealLogPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Food Name
         Text(
           _selectedFood!.name,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         if (_selectedFood!.brand.isNotEmpty)
           Text(_selectedFood!.brand, style: TextStyle(color: Colors.grey[600])),
+        if (_selectedFood!.source.isNotEmpty)
+          Text('Source: ${_selectedFood!.source}',
+              style: const TextStyle(color: Colors.grey)),
         const SizedBox(height: 20),
-
-        // Serving Size
         TextField(
           controller: _servingController,
           decoration: InputDecoration(
@@ -420,14 +464,11 @@ class _MealLogPageState extends State<MealLogPage> {
           keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 20),
-
-        // Nutrition Facts
         const Text(
           'Nutrition Facts:',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
