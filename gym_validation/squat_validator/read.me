@@ -1,0 +1,55 @@
+The script — offline validation, auto rep detection, full metrics
+
+
+
+python squat_validator.py --video D:\CDU\HIT401\main\gym_validation\squat_validator\downloads\squat.mp4 --out runs/run_001 --config config.yaml
+
+
+# 1) install deps
+python -m pip install opencv-python mediapipe numpy scipy pandas pyyaml tqdm matplotlib
+
+# 2) run
+python squat_validator.py \
+  --video /path/to/squats.mp4 \
+  --out runs/run_001 \
+  --config config.yaml
+
+
+python squat_validator.py \
+  --video gym_validation\squat_validator\downloads\squat2.mp4\
+  --out runs/run_004 \
+  --config config.yaml
+    --export_video runs/run_004/annotated.mp4
+
+
+to run with annoted video 
+python squat_validator_w_annoted.py --video "D:\CDU\HIT401\main\gym_validation\squat_validator\downloads\squat.mp4" --out "runs\run_006" --config "config.yaml" --export_video "runs\run_006\annotated.mp4"
+
+
+
+
+first comparision 
+(venv) PS D:\CDU\HIT401\main\gym_validation\squat_validator> python bench.py --json runs/run_006/squat_validation.json --labels labels.csv
+Video: squat.mp4
+GT reps: 6 | Pred reps: 2 | Matches@IoU>=0.5: 2
+Precision 1.00  Recall 0.33  F1 0.50
+Timing error (frames):  start 9.50±0.50 | bottom 3.00±0.00 | end 17.00±5.00
+Timing error (ms):      start 396.2±20.9 | bottom 125.1±0.0 | end 709.0±208.5
+(venv) PS D:\CDU\HIT401\main\gym_validation\squat_validator> 
+
+
+GT reps: 6 | Pred reps: 2  →  we only counted 2 out of 6 (recall = 0.33)
+Precision 1.00            →  the 2 we found are real (no false positives)
+Bottom error ≈ 3 frames   →  bottoms are close (good!)
+Start error ≈ 9.5 frames
+End error ≈ 17 frames     →  our “start” and “end” are detected too late
+
+
+
+python bench.py --json runs/run_013/squat
+_validation.json --labels labels.csv                                                                  
+Video: squat.mp4
+GT reps: 5 | Pred reps: 4 | Matches@IoU>=0.5: 4
+Precision 1.00  Recall 0.80  F1 0.89
+Timing error (frames):  start 10.50±2.06 | bottom 4.00±3.08 | end 17.75±4.38
+Timing error (ms):      start 437.9±86.0 | bottom 166.8±128.6 | end 740.3±182.7

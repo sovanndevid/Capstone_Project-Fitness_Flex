@@ -1,4 +1,0 @@
-video,ground_truth,predicted,frames_evaluated,good_ratio,match
-bad_squat1.mp4,bad,bad,116,0.0,1
-good_squat1.mp4,good,bad,251,0.0,0
-good_squat2.mp4,good,bad,899,0.0,0
