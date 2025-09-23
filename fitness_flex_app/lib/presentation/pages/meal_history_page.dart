@@ -72,6 +72,89 @@ class _MealHistoryPageState extends State<MealHistoryPage> {
     }
   }
 
+  void _showMealActions(Meal meal) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete'),
+              onTap: () async {
+                Navigator.of(ctx).pop();
+                final confirm =
+                    await showDialog<bool>(
+                      context: context,
+                      builder: (d) => AlertDialog(
+                        title: const Text('Delete meal?'),
+                        content: Text('Remove "${meal.name}" from history?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(d, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(d, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    ) ??
+                    false;
+                if (!confirm) return;
+
+                await widget.nutritionRepository.deleteMeal(meal.id);
+                setState(_loadMeals);
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Meal deleted')));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteMealWithUndo(Meal meal) async {
+    final confirm = await showDialog<bool>(
+          context: context,
+          builder: (d) => AlertDialog(
+            title: const Text('Delete meal?'),
+            content: Text('Remove "${meal.name}" from history?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete')),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirm) return;
+
+    await widget.nutritionRepository.deleteMeal(meal.id);
+    setState(_loadMeals);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Meal deleted'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            await widget.nutritionRepository.addMeal(meal);
+            setState(_loadMeals);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Meal restored')),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,9 +224,10 @@ class _MealHistoryPageState extends State<MealHistoryPage> {
                         ),
                     ],
                   ),
-                  trailing: Text(
-                    '${meal.protein.toStringAsFixed(0)}P ${meal.carbs.toStringAsFixed(0)}C ${meal.fat.toStringAsFixed(0)}F',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    tooltip: 'Delete',
+                    onPressed: () => _deleteMealWithUndo(meal),
                   ),
                 ),
               );

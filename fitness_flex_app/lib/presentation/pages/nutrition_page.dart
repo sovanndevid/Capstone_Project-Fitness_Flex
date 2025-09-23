@@ -466,21 +466,10 @@ class _NutritionPageState extends State<NutritionPage> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            tooltip: 'Edit Meal',
-                            onPressed: () {
-                              // You need to implement edit functionality in MealLogPage
-                              _navigateToMealLog(_selectedMealType);
-                            },
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            tooltip: 'Delete Meal',
+                            onPressed: () => _deleteMealWithUndo(meal),
                           ),
-                          // Optional: Add a delete button
-                          // IconButton(
-                          //   icon: const Icon(Icons.delete, color: Colors.red),
-                          //   tooltip: 'Delete Meal',
-                          //   onPressed: () {
-                          //     // Implement delete functionality here
-                          //   },
-                          // ),
                         ],
                       ),
                     ),
@@ -559,5 +548,40 @@ class _NutritionPageState extends State<NutritionPage> {
       ),
     );
     _refreshData(); // <-- This ensures the meal list is refreshed after logging
+  }
+
+  Future<void> _deleteMealWithUndo(Meal meal) async {
+    final confirm = await showDialog<bool>(
+          context: context,
+          builder: (d) => AlertDialog(
+            title: const Text('Delete meal?'),
+            content: Text('Remove "${meal.name}" from today?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete')),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirm) return;
+
+    await _nutritionRepository.deleteMeal(meal.id);
+    _refreshData();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Meal deleted'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            await _nutritionRepository.addMeal(meal);
+            _refreshData();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Meal restored')),
+            );
+          },
+        ),
+      ),
+    );
   }
 }

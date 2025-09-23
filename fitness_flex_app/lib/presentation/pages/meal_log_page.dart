@@ -186,8 +186,23 @@ Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${_selectedMealType.capitalize()} logged successfully!'),
-        duration: const Duration(seconds: 2),
+        content: Text('${_selectedMealType.capitalize()} logged'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            try {
+              await widget.nutritionRepository.deleteMeal(meal.id);
+              widget.onMealAdded();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Meal removed')),
+              );
+            } catch (_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Failed to remove meal')),
+              );
+            }
+          },
+        ),
       ),
     );
 
