@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "482222980629",
+    "project_id": "fitnessflex-859b3",
+    "storage_bucket": "fitnessflex-859b3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:482222980629:android:f9ed34953a4f297b61181c",
+        "android_client_info": {
+          "package_name": "com.example.fitness_flex_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBsVKKKi5hna437zij5aman4Fm3mVyJdI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:fitness_flex_app/core/themes/app_theme.dart';
 import 'package:fitness_flex_app/navigation/app_router.dart';
 import 'chat_screen.dart';
@@ -14,51 +17,50 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  // Sample user data
-  final Map<String, dynamic> userData = {
-    'name': 'Alex',
-    'goal': 'Lose Weight',
-    'daysCompleted': 16,
-    'targetDays': 30,
-    'caloriesBurned': 420,
-    'caloriesTarget': 600,
-    'waterIntake': 1.8,
-    'waterTarget': 2.5,
-    'steps': 7843,
-    'stepsTarget': 10000,
-  };
+  Map<String, dynamic>? _userData;
+  bool _loading = true;
 
-  // Sample workout data
-  final List<Map<String, dynamic>> recentWorkouts = [
-    {
-      'name': 'Chest & Triceps',
-      'duration': '45 min',
-      'calories': 320,
-      'date': 'Today',
-      'icon': Icons.fitness_center,
-    },
-    {
-      'name': 'Morning Yoga',
-      'duration': '30 min',
-      'calories': 180,
-      'date': 'Yesterday',
-      'icon': Icons.self_improvement,
-    },
-    {
-      'name': 'Evening Run',
-      'duration': '35 min',
-      'calories': 280,
-      'date': '2 days ago',
-      'icon': Icons.directions_run,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection("users")
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+          setState(() {
+            _userData = doc.data();
+            _loading = false;
+          });
+        } else {
+          setState(() {
+            _userData = {};
+            _loading = false;
+          });
+        }
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load user data: $e")),
+      );
+    }
+  }
 
   void _onItemTapped(int index) {
     if (index == 1) {
-      // Workout tab
       Navigator.pushNamed(context, AppRouter.workout);
     } else if (index == 2) {
-      // Nutrition tab
       Navigator.pushNamed(context, AppRouter.nutrition);
     } else {
       setState(() {
@@ -69,6 +71,15 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final name = _userData?['firstName'] ?? "User";
+    final goal = _userData?['fitnessGoal'] ?? "Your Goal";
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -76,11 +87,11 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Hello, ${userData['name']}!',
+              'Hello, $name!',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
-              userData['goal'],
+              goal,
               style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
@@ -100,7 +111,10 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () {},
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -108,22 +122,18 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Progress Card
             _buildProgressCard(),
             const SizedBox(height: 20),
 
-            // Today's Stats
             const Text(
               "Today's Stats",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
-            // Stats Grid
             _buildStatsGrid(),
             const SizedBox(height: 24),
 
-            // Recent Workouts
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -136,11 +146,9 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 16),
 
-            // Workout List
             _buildWorkoutList(),
             const SizedBox(height: 24),
 
-            // Quick Actions
             const Text(
               "Quick Actions",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -151,28 +159,17 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRouter.formCheck),
         icon: const Icon(Icons.camera_alt),
         label: const Text('Form Checker'),
       ),
-
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fitness_center),
-            label: 'Workouts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant),
-            label: 'Nutrition',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.show_chart),
-            label: 'Progress',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.fitness_center), label: 'Workouts'),
+          BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Nutrition'),
+          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: AppTheme.primaryColor,
@@ -183,7 +180,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildProgressCard() {
-    double progress = userData['daysCompleted'] / userData['targetDays'];
+    final daysCompleted = _userData?['daysCompleted'] ?? 0;
+    final targetDays = _userData?['targetDays'] ?? 30;
+    double progress = targetDays > 0 ? daysCompleted / targetDays : 0;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -195,7 +194,7 @@ class _HomePageState extends State<HomePage> {
               animation: true,
               lineHeight: 20,
               animationDuration: 1000,
-              percent: progress,
+              percent: progress.clamp(0, 1),
               center: Text(
                 "${(progress * 100).toStringAsFixed(0)}%",
                 style: const TextStyle(color: Colors.white),
@@ -205,7 +204,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 16),
             Text(
-              "Day ${userData['daysCompleted']} of ${userData['targetDays']}",
+              "Day $daysCompleted of $targetDays",
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -220,6 +219,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildStatsGrid() {
+    final calories = _userData?['macros']?['calories'] ?? 0;
+    final protein = _userData?['macros']?['protein'] ?? 0;
+    final carbs = _userData?['macros']?['carbs'] ?? 0;
+    final fat = _userData?['macros']?['fat'] ?? 0;
+
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -230,35 +234,35 @@ class _HomePageState extends State<HomePage> {
       children: [
         _buildStatCard(
           title: 'Calories',
-          value: '${userData['caloriesBurned']}',
-          subtitle: '/ ${userData['caloriesTarget']} kcal',
+          value: '$calories',
+          subtitle: 'kcal',
           icon: Icons.local_fire_department,
           color: Colors.orange,
-          progress: userData['caloriesBurned'] / userData['caloriesTarget'],
+          progress: 0.7,
         ),
         _buildStatCard(
-          title: 'Water',
-          value: '${userData['waterIntake']}L',
-          subtitle: '/ ${userData['waterTarget']}L',
+          title: 'Protein',
+          value: '$protein g',
+          subtitle: 'per day',
+          icon: Icons.fitness_center,
+          color: Colors.red,
+          progress: 0.6,
+        ),
+        _buildStatCard(
+          title: 'Carbs',
+          value: '$carbs g',
+          subtitle: 'per day',
+          icon: Icons.rice_bowl,
+          color: Colors.green,
+          progress: 0.5,
+        ),
+        _buildStatCard(
+          title: 'Fat',
+          value: '$fat g',
+          subtitle: 'per day',
           icon: Icons.water_drop,
           color: Colors.blue,
-          progress: userData['waterIntake'] / userData['waterTarget'],
-        ),
-        _buildStatCard(
-          title: 'Steps',
-          value: '${userData['steps']}',
-          subtitle: '/ ${userData['stepsTarget']}',
-          icon: Icons.directions_walk,
-          color: Colors.green,
-          progress: userData['steps'] / userData['stepsTarget'],
-        ),
-        _buildStatCard(
-          title: 'Sleep',
-          value: '7h 30m',
-          subtitle: '/ 8h goal',
-          icon: Icons.nightlight_round,
-          color: Colors.purple,
-          progress: 7.5 / 8,
+          progress: 0.4,
         ),
       ],
     );
@@ -316,50 +320,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildWorkoutList() {
+    // Placeholder for now — later hook to Firestore
+    final workouts = [
+      {"name": "Chest & Triceps", "duration": "45 min", "calories": 320, "date": "Today", "icon": Icons.fitness_center},
+      {"name": "Morning Yoga", "duration": "30 min", "calories": 180, "date": "Yesterday", "icon": Icons.self_improvement},
+      {"name": "Evening Run", "duration": "35 min", "calories": 280, "date": "2 days ago", "icon": Icons.directions_run},
+    ];
+
     return Column(
-      children: recentWorkouts.map((workout) {
+      children: workouts.map((workout) {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
-              child: Icon(workout['icon'], color: AppTheme.primaryColor),
+              child: Icon(workout['icon'] as IconData, color: AppTheme.primaryColor),
             ),
             title: Text(
-              workout['name'],
+              workout['name'] as String,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text(
-              "${workout['duration']} • ${workout['calories']} kcal",
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  workout['date'],
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    "Completed",
-                    style: TextStyle(fontSize: 10, color: Colors.green),
-                  ),
-                ),
-              ],
-            ),
-            onTap: () {},
+            subtitle: Text("${workout['duration']} • ${workout['calories']} kcal"),
+            trailing: Text(workout['date'] as String, style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ),
         );
       }).toList(),
@@ -370,21 +353,9 @@ class _HomePageState extends State<HomePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _buildActionButton(
-          icon: Icons.add,
-          label: 'Start Workout',
-          onTap: () {},
-        ),
-        _buildActionButton(
-          icon: Icons.restaurant,
-          label: 'Log Meal',
-          onTap: () {},
-        ),
-        _buildActionButton(
-          icon: Icons.water_drop,
-          label: 'Log Water',
-          onTap: () {},
-        ),
+        _buildActionButton(icon: Icons.add, label: 'Start Workout', onTap: () {}),
+        _buildActionButton(icon: Icons.restaurant, label: 'Log Meal', onTap: () {}),
+        _buildActionButton(icon: Icons.water_drop, label: 'Log Water', onTap: () {}),
       ],
     );
   }

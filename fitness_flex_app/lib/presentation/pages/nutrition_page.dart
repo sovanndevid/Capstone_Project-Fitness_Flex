@@ -3,7 +3,7 @@ import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
 import 'package:fitness_flex_app/presentation/pages/meal_log_page.dart';
 import 'package:fitness_flex_app/presentation/pages/water_tracker_page.dart';
 import 'package:fitness_flex_app/presentation/pages/nutrition_goals_page.dart';
-import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart'; // <-- Add this import
+import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart'; 
 import 'package:fitness_flex_app/data/models/meal.dart';
 import 'package:fitness_flex_app/data/models/nutrition_goal.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';

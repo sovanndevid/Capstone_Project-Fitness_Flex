@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fitness_flex_app/navigation/app_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fitness_flex_app/presentation/pages/forget_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,6 +16,36 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _obscurePassword = true;
+
+  Future<void> _signIn() async {
+    try {
+      final auth = FirebaseAuth.instance;
+      final userCredential = await auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      final user = userCredential.user;
+      if (user != null) {
+        if (user.emailVerified) {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, AppRouter.home);
+          }
+        } else {
+          await auth.signOut();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Please verify your email before logging in."),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login failed: $e")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +133,13 @@ class _LoginPageState extends State<LoginPage> {
                         const Spacer(),
                         TextButton(
                           onPressed: () {
-                            // Forgot password functionality
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ForgotPasswordPage(),
+                              ),
+                            );
                           },
                           child: const Text('Forgot Password?'),
                         ),
@@ -113,12 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: ElevatedButton(
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
-                            // For now, just navigate to home page
-                            // Later we'll add actual authentication
-                            Navigator.pushReplacementNamed(
-                              context,
-                              AppRouter.home,
-                            );
+                            _signIn();
                           }
                         },
                         child: const Text('Sign In'),
@@ -131,12 +164,10 @@ class _LoginPageState extends State<LoginPage> {
                         const Text("Don't have an account?"),
                         TextButton(
                           onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              Navigator.pushReplacementNamed(
-                                context,
-                                AppRouter.home,
-                              );
-                            }
+                            Navigator.pushReplacementNamed(
+                              context,
+                              AppRouter.register,
+                            );
                           },
                           child: const Text('Sign Up'),
                         ),
