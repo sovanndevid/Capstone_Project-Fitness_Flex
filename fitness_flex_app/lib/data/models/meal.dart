@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Meal {
   final String id;
   final String name;
@@ -7,8 +9,8 @@ class Meal {
   final double protein;
   final double carbs;
   final double fat;
-  final DateTime date;
-  final String mealType; // breakfast, lunch, dinner, snack
+  final DateTime date;       // stored as Firestore Timestamp
+  final String mealType;     // breakfast, lunch, dinner, snack
   final int servingSize;
 
   Meal({
@@ -35,25 +37,45 @@ class Meal {
       'protein': protein,
       'carbs': carbs,
       'fat': fat,
-      'date': date.toIso8601String(),
+      // Save as Firestore Timestamp for reliable range queries
+      'timestamp': Timestamp.fromDate(date),
       'mealType': mealType,
       'servingSize': servingSize,
     };
   }
 
-  factory Meal.fromMap(Map<String, dynamic> map) {
+  /// Backward-compatible: accepts either Timestamp (`timestamp`) or ISO string (`date`)
+  factory Meal.fromMap(Map<String, dynamic> map, {String? docId}) {
+    final Object? ts = map['timestamp'] ?? map['date'];
+    DateTime when;
+
+    if (ts is Timestamp) {
+      when = ts.toDate();
+    } else if (ts is String) {
+      // legacy ISO string
+      when = DateTime.tryParse(ts) ?? DateTime.now();
+    } else {
+      when = DateTime.now();
+    }
+
     return Meal(
-      id: map['id'],
-      name: map['name'],
-      description: map['description'],
-      imageUrl: map['imageUrl'],
-      calories: map['calories'],
-      protein: map['protein'],
-      carbs: map['carbs'],
-      fat: map['fat'],
-      date: DateTime.parse(map['date']),
-      mealType: map['mealType'],
-      servingSize: map['servingSize'],
+      id: (docId ?? map['id'] ?? '').toString(),
+      name: (map['name'] ?? '').toString(),
+      description: (map['description'] ?? '').toString(),
+      imageUrl: (map['imageUrl'] ?? '').toString(),
+      calories: (map['calories'] as num? ?? 0).toDouble(),
+      protein: (map['protein'] as num? ?? 0).toDouble(),
+      carbs: (map['carbs'] as num? ?? 0).toDouble(),
+      fat: (map['fat'] as num? ?? 0).toDouble(),
+      date: when,
+      mealType: (map['mealType'] ?? 'breakfast').toString(),
+      servingSize: (map['servingSize'] as num? ?? 1).toInt(),
     );
+  }
+
+  /// Convenience for Firestore docs
+  factory Meal.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? {};
+    return Meal.fromMap(data, docId: doc.id);
   }
 }

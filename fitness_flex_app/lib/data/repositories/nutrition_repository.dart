@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:fitness_flex_app/data/models/meal.dart';
 import 'package:fitness_flex_app/data/models/water_intake.dart';
@@ -10,14 +12,27 @@ import 'package:fitness_flex_app/data/models/ausnut_service.dart';
 
 /// --- Main Repository ---
 class NutritionRepository {
-  static const String _usdaApiKey =
-      "Akb8A33VjAPLOBkB6qcaC4tzBBhStuHK7xum8jb8";
-  static const String _usdaBaseUrl =
-      "https://api.nal.usda.gov/fdc/v1/foods/search";
+  // ---------- External food sources ----------
+  static const String _usdaApiKey = "Akb8A33VjAPLOBkB6qcaC4tzBBhStuHK7xum8jb8";
+  static const String _usdaBaseUrl = "https://api.nal.usda.gov/fdc/v1/foods/search";
 
-  final List<Meal> _meals = [];
+  // ---------- Firebase (for meals + goals only) ----------
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String get _uid {
+    final u = _auth.currentUser;
+    if (u == null) throw StateError('User is not logged in.');
+    return u.uid;
+  }
+
+  CollectionReference<Map<String, dynamic>> get _users => _db.collection('users');
+
+  // ---------- In-memory (leave WaterTracker as-is) ----------
   final List<WaterIntake> _waterIntakes = [];
-  NutritionGoal _nutritionGoal = NutritionGoal(
+
+  // ---------- Default goal fallback (shown if Firestore has no macros) ----------
+  NutritionGoal _fallbackGoal = NutritionGoal(
     dailyCalories: 2000,
     dailyProtein: 150,
     dailyCarbs: 250,
@@ -25,102 +40,76 @@ class NutritionRepository {
     dailyWater: 2.5,
   );
 
-  /// 🔹 Search foods using BOTH USDA + AUSNUT APIs
+  // ======================================================
+  //                  FOOD SEARCH (unchanged)
+  // ======================================================
   Future<List<FoodItem>> searchFood(String query) async {
-    if (query.isEmpty) return [];
+    if (query.trim().isEmpty) return [];
 
     final List<FoodItem> results = [];
 
-    // --- USDA search ---
+    // USDA
     try {
-      final usdaResponse = await http.get(
+      final r = await http.get(
         Uri.parse("$_usdaBaseUrl?query=$query&pageSize=10&api_key=$_usdaApiKey"),
       );
-      if (usdaResponse.statusCode == 200) {
-        final data = jsonDecode(usdaResponse.body);
-        final foods = data['foods'] as List? ?? [];
+      if (r.statusCode == 200) {
+        final data = jsonDecode(r.body) as Map<String, dynamic>;
+        final foods = (data['foods'] as List?) ?? [];
         results.addAll(foods.map((f) => FoodItemUSDA.fromUSDAJson(f)).toList());
       }
-    } catch (e) {
-      print("⚠️ USDA search failed: $e");
-    }
+    } catch (_) {}
 
-    // --- AUSNUT search ---
+    // AUSNUT
     try {
       final ausnutFoods = await AUSNUTService.searchFoods(query);
       results.addAll(ausnutFoods);
-    } catch (e) {
-      print("⚠️ AUSNUT search failed: $e");
-    }
+    } catch (_) {}
 
     return results;
   }
 
-  /// 🔹 Add meal
+  // ======================================================
+  //                        MEALS (Firestore)
+  // ======================================================
   Future<void> addMeal(Meal meal) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _meals.add(meal);
+    await _users
+        .doc(_uid)
+        .collection('meals')
+        .doc(meal.id)
+        .set(meal.toMap(), SetOptions(merge: true));
   }
 
-  /// 🔹 Get today's meals
+  Future<void> deleteMeal(String mealId) async {
+    await _users.doc(_uid).collection('meals').doc(mealId).delete();
+  }
+
+  /// Meals logged today (00:00–24:00) using Firestore Timestamp
   Future<List<Meal>> getTodayMeals() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final today = DateTime.now();
-    return _meals
-        .where(
-          (meal) =>
-              meal.date.year == today.year &&
-              meal.date.month == today.month &&
-              meal.date.day == today.day,
-        )
-        .toList();
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = start.add(const Duration(days: 1));
+
+    final snap = await _users
+        .doc(_uid)
+        .collection('meals')
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('timestamp', isLessThan: Timestamp.fromDate(end))
+        .get();
+
+    return snap.docs.map((d) => Meal.fromDoc(d)).toList();
   }
 
-  /// 🔹 Water intake tracking
-  Future<List<WaterIntake>> getTodayWaterIntakes() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final today = DateTime.now();
-    return _waterIntakes
-        .where(
-          (water) =>
-              water.date.year == today.year &&
-              water.date.month == today.month &&
-              water.date.day == today.day,
-        )
-        .toList();
-  }
-
-  Future<void> addWaterIntake(WaterIntake waterIntake) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _waterIntakes.add(waterIntake);
-  }
-
-  /// 🔹 Nutrition goals
-  Future<NutritionGoal> getNutritionGoal() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    return _nutritionGoal;
-  }
-
-  Future<void> updateNutritionGoal(NutritionGoal goal) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _nutritionGoal = goal;
-  }
-
-  /// 🔹 Nutrition summary for today
+  /// Aggregate macros from today's meals
   Future<Map<String, double>> getTodayNutritionSummary() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final todayMeals = await getTodayMeals();
+    final meals = await getTodayMeals();
+    double totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
 
-    double totalCalories = 0;
-    double totalProtein = 0;
-    double totalCarbs = 0;
-    double totalFat = 0;
-
-    for (var meal in todayMeals) {
-      totalCalories += meal.calories;
-      totalProtein += meal.protein;
-      totalCarbs += meal.carbs;
-      totalFat += meal.fat;
+    for (final m in meals) {
+      totalCalories += m.calories;
+      totalProtein += m.protein;
+      totalCarbs += m.carbs;
+      totalFat += m.fat;
     }
 
     return {
@@ -131,20 +120,63 @@ class NutritionRepository {
     };
   }
 
-  Future<double> getTodayWaterSummary() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final todayWater = await getTodayWaterIntakes();
-    return todayWater.fold<double>(0.0, (sum, water) => sum + water.amount);
+  // ======================================================
+  //                        GOALS (Firestore)
+  // ======================================================
+  Future<NutritionGoal> getNutritionGoal() async {
+    final userDoc = await _users.doc(_uid).get();
+    final data = userDoc.data() ?? {};
+    final macros = (data['macros'] as Map<String, dynamic>?);
+
+    if (macros == null) return _fallbackGoal;
+
+    return NutritionGoal(
+      dailyCalories: (macros['calories'] as num? ?? _fallbackGoal.dailyCalories).toDouble(),
+      dailyProtein : (macros['protein']  as num? ?? _fallbackGoal.dailyProtein ).toDouble(),
+      dailyCarbs   : (macros['carbs']    as num? ?? _fallbackGoal.dailyCarbs   ).toDouble(),
+      dailyFat     : (macros['fat']      as num? ?? _fallbackGoal.dailyFat     ).toDouble(),
+      dailyWater   : _fallbackGoal.dailyWater, // keep default unless you add it in Firestore
+    );
   }
 
-  /// 🔹 Deletion
-  Future<void> deleteMeal(String mealId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _meals.removeWhere((meal) => meal.id == mealId);
+  Future<void> updateNutritionGoal(NutritionGoal goal) async {
+    _fallbackGoal = goal; // also update local fallback
+    await _users.doc(_uid).set({
+      'macros': {
+        'calories': goal.dailyCalories,
+        'protein' : goal.dailyProtein,
+        'carbs'   : goal.dailyCarbs,
+        'fat'     : goal.dailyFat,
+      }
+    }, SetOptions(merge: true));
+  }
+
+  // ======================================================
+  //                      WATER (IN-MEMORY)
+  //            <<< LEAVE AS ORIGINAL BEHAVIOR >>>
+  // ======================================================
+  Future<void> addWaterIntake(WaterIntake waterIntake) async {
+    // Keep local behavior for now (no Firestore writes)
+    _waterIntakes.add(waterIntake);
+    await Future.delayed(const Duration(milliseconds: 50));
+  }
+
+  Future<List<WaterIntake>> getTodayWaterIntakes() async {
+    await Future.delayed(const Duration(milliseconds: 50));
+    final today = DateTime.now();
+    return _waterIntakes.where((w) =>
+        w.date.year == today.year &&
+        w.date.month == today.month &&
+        w.date.day == today.day).toList();
+  }
+
+  Future<double> getTodayWaterSummary() async {
+    final todays = await getTodayWaterIntakes();
+    return todays.fold<double>(0.0, (sum, w) => sum + w.amount);
   }
 
   Future<void> deleteWaterIntake(String waterId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _waterIntakes.removeWhere((water) => water.id == waterId);
+    _waterIntakes.removeWhere((w) => w.id == waterId);
+    await Future.delayed(const Duration(milliseconds: 50));
   }
 }

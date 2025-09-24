@@ -7,6 +7,10 @@ import 'package:fitness_flex_app/core/themes/app_theme.dart';
 import 'package:fitness_flex_app/navigation/app_router.dart';
 import 'chat_screen.dart';
 
+// NEW: use the repo to get live totals from Firestore
+import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
+import 'package:fitness_flex_app/data/models/nutrition_goal.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -20,10 +24,21 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic>? _userData;
   bool _loading = true;
 
+  // ---- NEW: nutrition data for "Today's Stats"
+  final NutritionRepository _nutritionRepository = NutritionRepository();
+  late Future<Map<String, double>> _todaySummaryFuture;
+  late Future<NutritionGoal> _goalFuture;
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadNutritionFutures();
+  }
+
+  void _loadNutritionFutures() {
+    _todaySummaryFuture = _nutritionRepository.getTodayNutritionSummary();
+    _goalFuture = _nutritionRepository.getNutritionGoal();
   }
 
   Future<void> _loadUserData() async {
@@ -61,7 +76,8 @@ class _HomePageState extends State<HomePage> {
     if (index == 1) {
       Navigator.pushNamed(context, AppRouter.workout);
     } else if (index == 2) {
-      Navigator.pushNamed(context, AppRouter.nutrition);
+      Navigator.pushNamed(context, AppRouter.nutrition)
+          .then((_) => setState(_loadNutritionFutures)); // refresh after returning
     } else {
       setState(() {
         _selectedIndex = index;
@@ -117,46 +133,51 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProgressCard(),
-            const SizedBox(height: 20),
+      body: RefreshIndicator(
+        onRefresh: () async => setState(_loadNutritionFutures),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildProgressCard(),
+              const SizedBox(height: 20),
 
-            const Text(
-              "Today's Stats",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
+              const Text(
+                "Today's Stats",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
 
-            _buildStatsGrid(),
-            const SizedBox(height: 24),
+              // ---- NEW: dynamic stats grid
+              _buildStatsGridDynamic(),
+              const SizedBox(height: 24),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Recent Workouts",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                TextButton(onPressed: () {}, child: const Text("View All")),
-              ],
-            ),
-            const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Recent Workouts",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  TextButton(onPressed: () {}, child: const Text("View All")),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            _buildWorkoutList(),
-            const SizedBox(height: 24),
+              _buildWorkoutList(),
+              const SizedBox(height: 24),
 
-            const Text(
-              "Quick Actions",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
+              const Text(
+                "Quick Actions",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
 
-            _buildQuickActions(),
-          ],
+              _buildQuickActions(),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -218,53 +239,75 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildStatsGrid() {
-    final calories = _userData?['macros']?['calories'] ?? 0;
-    final protein = _userData?['macros']?['protein'] ?? 0;
-    final carbs = _userData?['macros']?['carbs'] ?? 0;
-    final fat = _userData?['macros']?['fat'] ?? 0;
+  // ===== NEW: Dynamic stats grid using Firestore data =====
+  Widget _buildStatsGridDynamic() {
+    return FutureBuilder(
+      future: Future.wait([_todaySummaryFuture, _goalFuture]),
+      builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const Text("Couldn't load today's stats",
+              style: TextStyle(color: Colors.red));
+        }
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.2,
-      children: [
-        _buildStatCard(
-          title: 'Calories',
-          value: '$calories',
-          subtitle: 'kcal',
-          icon: Icons.local_fire_department,
-          color: Colors.orange,
-          progress: 0.7,
-        ),
-        _buildStatCard(
-          title: 'Protein',
-          value: '$protein g',
-          subtitle: 'per day',
-          icon: Icons.fitness_center,
-          color: Colors.red,
-          progress: 0.6,
-        ),
-        _buildStatCard(
-          title: 'Carbs',
-          value: '$carbs g',
-          subtitle: 'per day',
-          icon: Icons.rice_bowl,
-          color: Colors.green,
-          progress: 0.5,
-        ),
-        _buildStatCard(
-          title: 'Fat',
-          value: '$fat g',
-          subtitle: 'per day',
-          icon: Icons.water_drop,
-          color: Colors.blue,
-          progress: 0.4,
-        ),
-      ],
+        final summary = snapshot.data![0] as Map<String, double>;
+        final goal = snapshot.data![1] as NutritionGoal;
+
+        final calories = summary['calories'] ?? 0;
+        final protein  = summary['protein']  ?? 0;
+        final carbs    = summary['carbs']    ?? 0;
+        final fat      = summary['fat']      ?? 0;
+
+        final calProg = goal.dailyCalories > 0 ? calories / goal.dailyCalories : 0;
+        final proProg = goal.dailyProtein  > 0 ? protein  / goal.dailyProtein  : 0;
+        final carbProg= goal.dailyCarbs    > 0 ? carbs    / goal.dailyCarbs    : 0;
+        final fatProg = goal.dailyFat      > 0 ? fat      / goal.dailyFat      : 0;
+
+        return GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 1.2,
+          children: [
+            _buildStatCard(
+              title: 'Calories',
+              value: '${calories.toStringAsFixed(0)}',
+              subtitle: 'of ${goal.dailyCalories.toStringAsFixed(0)} kcal',
+              icon: Icons.local_fire_department,
+              color: Colors.orange,
+              progress: calProg.clamp(0, 1).toDouble(),
+            ),
+            _buildStatCard(
+              title: 'Protein',
+              value: '${protein.toStringAsFixed(0)} g',
+              subtitle: 'of ${goal.dailyProtein.toStringAsFixed(0)} g',
+              icon: Icons.fitness_center,
+              color: Colors.red,
+              progress: proProg.clamp(0, 1).toDouble(),
+            ),
+            _buildStatCard(
+              title: 'Carbs',
+              value: '${carbs.toStringAsFixed(0)} g',
+              subtitle: 'of ${goal.dailyCarbs.toStringAsFixed(0)} g',
+              icon: Icons.rice_bowl,
+              color: Colors.green,
+              progress: carbProg.clamp(0, 1).toDouble(),
+            ),
+            _buildStatCard(
+              title: 'Fat',
+              value: '${fat.toStringAsFixed(0)} g',
+              subtitle: 'of ${goal.dailyFat.toStringAsFixed(0)} g',
+              icon: Icons.water_drop,
+              color: Colors.blue,
+              progress: fatProg.clamp(0, 1).toDouble(),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -310,7 +353,7 @@ class _HomePageState extends State<HomePage> {
             LinearProgressIndicator(
               value: progress,
               backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+              valueColor: AlwaysStoppedAnimation<Color>(progress > 1 ? Colors.red : color),
               borderRadius: BorderRadius.circular(10),
             ),
           ],
@@ -354,8 +397,15 @@ class _HomePageState extends State<HomePage> {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildActionButton(icon: Icons.add, label: 'Start Workout', onTap: () {}),
-        _buildActionButton(icon: Icons.restaurant, label: 'Log Meal', onTap: () {}),
-        _buildActionButton(icon: Icons.water_drop, label: 'Log Water', onTap: () {}),
+        _buildActionButton(icon: Icons.restaurant, label: 'Log Meal', onTap: () {
+          Navigator.pushNamed(context, AppRouter.nutrition)
+              .then((_) => setState(_loadNutritionFutures)); // refresh on return
+        }),
+        _buildActionButton(icon: Icons.water_drop, label: 'Log Water', onTap: () {
+          // keeps your water tracker behavior
+          Navigator.pushNamed(context, AppRouter.nutrition)
+              .then((_) => setState(_loadNutritionFutures));
+        }),
       ],
     );
   }
@@ -365,16 +415,19 @@ class _HomePageState extends State<HomePage> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: AppTheme.primaryColor,
-          child: Icon(icon, color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: AppTheme.primaryColor,
+            child: Icon(icon, color: Colors.white, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
     );
   }
 }
