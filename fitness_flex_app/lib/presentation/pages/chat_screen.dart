@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -75,34 +76,39 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  // ✅ Universal API call (works on Web, Android, iOS, Desktop)
   Future<String?> _askAI(String message, {String? imageBase64}) async {
+    const String apiUrl =
+        "https://studybuddy-backend-git-main-sovanndevidnong-admins-projects.vercel.app/api/chat";
+
     try {
-      final HttpClientRequest request = await HttpClient().postUrl(
-        Uri.parse("https://studybuddy-backend-git-main-sovanndevidnong-admins-projects.vercel.app/api/chat"),
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          'message': message,
+          if (imageBase64 != null) 'imageBase64': imageBase64,
+        }),
       );
-      request.headers.contentType = ContentType.json;
 
-      request.write(jsonEncode({
-        'message': message,
-        if (imageBase64 != null) 'imageBase64': imageBase64,
-      }));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
 
-      final HttpClientResponse response = await request.close();
-      final String jsonResponse = await response.transform(utf8.decoder).join();
-      final Map<String, dynamic> decoded = jsonDecode(jsonResponse);
-
-      if (decoded.containsKey('food')) {
-        return "Food: ${decoded['food']}\n"
-               "Calories: ${decoded['calories']} kcal\n"
-               "Protein: ${decoded['protein_g']}g\n"
-               "Carbs: ${decoded['carbs_g']}g\n"
-               "Fat: ${decoded['fat_g']}g\n"
-               "Notes: ${decoded['notes']}";
+        if (decoded.containsKey('food')) {
+          return "Food: ${decoded['food']}\n"
+              "Calories: ${decoded['calories']} kcal\n"
+              "Protein: ${decoded['protein_g']}g\n"
+              "Carbs: ${decoded['carbs_g']}g\n"
+              "Fat: ${decoded['fat_g']}g\n"
+              "Notes: ${decoded['notes']}";
+        } else {
+          return decoded['reply'] ?? "Sorry, I couldn't process that.";
+        }
       } else {
-        return decoded['reply'] ?? "Sorry, I couldn't process that.";
+        return "Error: ${response.statusCode} ${response.body}";
       }
     } catch (err) {
-      return "Network error. Please check your connection.";
+      return "Network error: $err";
     }
   }
 
