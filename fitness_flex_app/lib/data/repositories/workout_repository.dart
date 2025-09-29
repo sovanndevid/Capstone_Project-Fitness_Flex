@@ -1,6 +1,5 @@
 // lib/data/repositories/workout_repository.dart
 import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:fitness_flex_app/data/models/workout_model.dart';
@@ -201,7 +200,7 @@ class WorkoutRepository {
       case WorkoutCategory.custom:
         // list() returns a tuple; take the first element (list)
         final tuple = await ExerciseApi.list(limit: 20, offset: 0);
-        items = tuple;
+        items = tuple.$1;
         break;
     }
 
@@ -253,5 +252,54 @@ class WorkoutRepository {
   Future<List<Workout>> getPopularWorkouts() async {
     final all = await getWorkouts();
     return all.take(3).toList();
+  }
+
+  /* ---------------- Search & Instant Workouts --------------- */
+
+  /// Raw exercise search
+  Future<List<Exercise>> searchExercises(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return [];
+    return ExerciseApi.search(q);
+  }
+
+  /// Filtered exercise search (chips)
+  Future<List<Exercise>> filterExercises({
+    String? bodyPart,
+    String? equipment,
+    String? muscle,
+  }) async {
+    return ExerciseApi.filter(
+      bodyPart: bodyPart,
+      equipment: equipment,
+      muscle: muscle,
+    );
+  }
+
+  /// Create a one-off workout from exercises
+  Workout buildInstantWorkout({
+    required String title,
+    required List<Exercise> items,
+    WorkoutCategory category = WorkoutCategory.strength,
+    WorkoutDifficulty difficulty = WorkoutDifficulty.beginner,
+    String description = '',
+  }) {
+    return _buildWorkout(
+      title: title,
+      items: items,
+      category: category,
+      difficulty: difficulty,
+      description: description.isEmpty ? 'Results for "$title"' : description,
+    );
+  }
+
+  /// Quick helper: query -> workout (top 8 results)
+  Future<Workout?> searchToWorkout(String q) async {
+    final hits = await searchExercises(q);
+    if (hits.isEmpty) return null;
+    return buildInstantWorkout(
+      title: q,
+      items: hits.take(8).toList(),
+    );
   }
 }

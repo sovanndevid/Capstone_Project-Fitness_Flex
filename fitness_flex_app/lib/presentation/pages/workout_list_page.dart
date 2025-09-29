@@ -3,6 +3,8 @@ import 'package:fitness_flex_app/data/models/workout_model.dart';
 import 'package:fitness_flex_app/data/repositories/workout_repository.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_detail_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_category_page.dart';
+import 'package:fitness_flex_app/presentation/pages/workout_player_page.dart';
+import 'package:fitness_flex_app/presentation/pages/workout_search_page.dart';
 
 class WorkoutListPage extends StatefulWidget {
   const WorkoutListPage({super.key});
@@ -36,7 +38,17 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
       appBar: AppBar(
         title: const Text('Workouts'),
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+IconButton(
+  icon: const Icon(Icons.search),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkoutSearchPage(repo: _workoutRepository),
+      ),
+    );
+  },
+),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData),
         ],
       ),

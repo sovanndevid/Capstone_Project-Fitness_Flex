@@ -1,44 +1,72 @@
-// lib/data/services/exercise_api.dart (or your actual path)
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/exercise.dart';
+import 'package:fitness_flex_app/data/models/exercise.dart';
 
 class ExerciseApi {
-  static const _base = 'https://exercise-backend-alpha.vercel.app/api/v1';
+  static const String _baseUrl = 'https://exercise-backend-alpha.vercel.app/api/v1';
 
-  static Future<Map<String, dynamic>> _get(String path, [Map<String, String>? qp]) async {
-    final uri = Uri.parse('$_base$path').replace(queryParameters: qp);
-    final res = await http.get(uri);
-    if (res.statusCode != 200) {
+  static Uri _u(String path, [Map<String, String>? q]) =>
+      Uri.parse('$_baseUrl$path').replace(queryParameters: q);
+
+  static Future<Map<String, dynamic>> _getJson(Uri url) async {
+    final res = await http.get(url, headers: {'Accept': 'application/json'});
+    if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('HTTP ${res.statusCode}: ${res.body}');
     }
-    return jsonDecode(res.body) as Map<String, dynamic>;
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return body;
   }
 
-  static Future<List<Exercise>> list({int limit = 20, int offset = 0}) async {
-    final body = await _get('/exercises', {'limit': '$limit', 'offset': '$offset'});
-    return (body['data'] as List).map((e) => Exercise.fromExDb(e)).toList();
-  }
+  /* ---------- Endpoints ---------- */
 
-
+  /// Search exercises by text. API requires `q`, not `query`.
   static Future<List<Exercise>> search(String q) async {
-
-    final body = await _get('/exercises/search', {'q': q});
-    return (body['data'] as List).map((e) => Exercise.fromExDb(e)).toList();
+    final json = await _getJson(_u('/exercises/search', {'q': q}));
+    final data = (json['data'] as List?) ?? const [];
+    return data.map((e) => Exercise.fromExDb(e)).toList();
   }
 
+  /// Paged list
+  static Future<(List<Exercise>, int)> list({int limit = 20, int offset = 0}) async {
+    final json = await _getJson(_u('/exercises', {
+      'limit': '$limit',
+      'offset': '$offset',
+    }));
+    final data = (json['data'] as List?) ?? const [];
+    final total = (json['total'] as num?)?.toInt() ?? data.length;
+    return (data.map((e) => Exercise.fromExDb(e)).toList(), total);
+  }
 
-  static Future<List<Exercise>> filter({String? bodyPart, String? equipment, String? muscle}) async {
+  /// Filter by any combo
+  static Future<List<Exercise>> filter({
+    String? bodyPart,
+    String? equipment,
+    String? muscle,
+  }) async {
     final qp = <String, String>{};
-    if (bodyPart != null) qp['bodyPart'] = bodyPart;
-    if (equipment != null) qp['equipment'] = equipment;
-    if (muscle != null) qp['muscle'] = muscle;
-    final body = await _get('/exercises/filter', qp);
-    return (body['data'] as List).map((e) => Exercise.fromExDb(e)).toList();
+    if (bodyPart != null && bodyPart.isNotEmpty) qp['bodyPart'] = bodyPart;
+    if (equipment != null && equipment.isNotEmpty) qp['equipment'] = equipment;
+    if (muscle != null && muscle.isNotEmpty) qp['muscle'] = muscle;
+    final json = await _getJson(_u('/exercises/filter', qp));
+    final data = (json['data'] as List?) ?? const [];
+    return data.map((e) => Exercise.fromExDb(e)).toList();
   }
 
-  static Future<List<Exercise>> byEquipment(String name) async {
-    final body = await _get('/equipments/${Uri.encodeComponent(name)}/exercises');
-    return (body['data'] as List).map((e) => Exercise.fromExDb(e)).toList();
+  static Future<List<Exercise>> byBodyPart(String bodyPart) async {
+    final json = await _getJson(_u('/bodyparts/$bodyPart/exercises'));
+    final data = (json['data'] as List?) ?? const [];
+    return data.map((e) => Exercise.fromExDb(e)).toList();
+  }
+
+  static Future<List<Exercise>> byEquipment(String equipment) async {
+    final json = await _getJson(_u('/equipments/$equipment/exercises'));
+    final data = (json['data'] as List?) ?? const [];
+    return data.map((e) => Exercise.fromExDb(e)).toList();
+  }
+
+  static Future<List<Exercise>> byMuscle(String muscle) async {
+    final json = await _getJson(_u('/muscles/$muscle/exercises'));
+    final data = (json['data'] as List?) ?? const [];
+    return data.map((e) => Exercise.fromExDb(e)).toList();
   }
 }
