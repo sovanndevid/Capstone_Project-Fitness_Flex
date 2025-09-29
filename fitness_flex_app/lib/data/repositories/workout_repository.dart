@@ -1,188 +1,257 @@
+// lib/data/repositories/workout_repository.dart
+import 'dart:math';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:fitness_flex_app/data/models/workout_model.dart';
+import 'package:fitness_flex_app/data/models/workout_builder.dart';
+import 'package:fitness_flex_app/data/models/exercise.dart';
+import 'package:fitness_flex_app/data/models/exercise_api.dart';
 
+/// Helpers to convert between enum and wire/string values.
+extension WorkoutCategoryWire on WorkoutCategory {
+  /// lowercase token we use in requests / routing
+  String get wire => name.toLowerCase(); // e.g. "Strength Training" -> "strength"
+  static WorkoutCategory fromWire(String wire) {
+    switch (wire.toLowerCase()) {
+      case 'strength':
+      case 'strength training':
+        return WorkoutCategory.strength;
+      case 'cardio':
+        return WorkoutCategory.cardio;
+      case 'yoga':
+      case 'yoga & flexibility':
+        return WorkoutCategory.yoga;
+      case 'hiit':
+        return WorkoutCategory.hiit;
+      case 'custom':
+      default:
+        return WorkoutCategory.custom;
+    }
+  }
+}
+
+/// Single dynamic repo (ExerciseDB + optional Firestore favorites).
 class WorkoutRepository {
-  final List<WorkoutCategory> categories = [
-    WorkoutCategory.strength,
-    WorkoutCategory.cardio,
-    WorkoutCategory.yoga,
-    WorkoutCategory.hiit,
-  ];
+  WorkoutRepository({
+    FirebaseFirestore? firestore,
+    this.userId,
+  }) : _db = firestore;
 
-  final List<Workout> workouts = [
-    Workout(
-      id: '1',
-      title: 'Full Body Strength',
-      description: 'Complete full body workout targeting all major muscle groups with compound exercises',
-      imageUrl: '💪',
-      duration: '45 min',
-      calories: 320,
-      difficulty: 'Intermediate',
-      category: 'Strength Training',
-      equipment: 'Dumbbells, Bench',
-      focusArea: 'Full Body',
-      exercises: [
-        WorkoutExercise(
-          id: '1',
-          name: 'Bench Press',
-          description: 'Chest exercise using barbell - 3 sets of 10 reps',
-          imageUrl: '📸',
-          videoUrl: '',
-          duration: '15 min',
-          sets: 3,
-          reps: 10,
-          restTime: '60s',
-        ),
-        WorkoutExercise(
-          id: '2',
-          name: 'Squats',
-          description: 'Leg exercise with barbell - 4 sets of 12 reps',
-          imageUrl: '📸',
-          videoUrl: '',
-          duration: '20 min',
-          sets: 4,
-          reps: 12,
-          restTime: '60s',
-        ),
-        WorkoutExercise(
-          id: '3',
-          name: 'Pull-ups',
-          description: 'Back exercise using bodyweight - 3 sets to failure',
-          imageUrl: '📸',
-          videoUrl: '',
-          duration: '10 min',
-          sets: 3,
-          reps: 8,
-          restTime: '45s',
-        ),
-      ],
-    ),
-    Workout(
-      id: '2',
-      title: 'Morning Yoga Flow',
-      description: 'Gentle yoga routine to start your day with stretching and breathing',
-      imageUrl: '🧘‍♀️',
-      duration: '30 min',
-      calories: 180,
-      difficulty: 'Beginner',
-      category: 'Yoga & Flexibility',
-      equipment: 'Yoga Mat',
-      focusArea: 'Full Body',
-      exercises: [
-        WorkoutExercise(
-          id: '1',
-          name: 'Sun Salutations',
-          description: 'Sequence of yoga poses for warm-up',
-          imageUrl: '📸',
-          videoUrl: '',
-          duration: '5 min',
-          sets: 1,
-          reps: 12,
-          restTime: '0s',
-        ),
-        WorkoutExercise(
-          id: '2',
-          name: 'Warrior Poses',
-          description: 'Strength building yoga poses',
-          imageUrl: '📸',
-          videoUrl: '',
-          duration: '10 min',
-          sets: 1,
-          reps: 3,
-          restTime: '15s',
-        ),
-      ],
-    ),
-    Workout(
-      id: '3',
-      title: 'HIIT Cardio Blast',
-      description: 'High intensity interval training for maximum calorie burn and endurance',
-      imageUrl: '🔥',
-      duration: '25 min',
-      calories: 280,
-      difficulty: 'Advanced',
-      category: 'HIIT',
-      equipment: 'None',
-      focusArea: 'Cardio',
-      exercises: [
-        WorkoutExercise(
-          id: '1',
-          name: 'Jumping Jacks',
-          description: 'Full body cardio exercise - 45s work, 15s rest',
-          imageUrl: '📸',
-          videoUrl: '',
-          duration: '45s on, 15s off',
-          sets: 1,
-          reps: 1,
-          restTime: '15s',
-        ),
-        WorkoutExercise(
-          id: '2',
-          name: 'Burpees',
-          description: 'Full body explosive movement - 45s work, 15s rest',
-          imageUrl: '📸',
-          videoUrl: '',
-          duration: '45s on, 15s off',
-          sets: 1,
-          reps: 1,
-          restTime: '15s',
-        ),
-      ],
-    ),
-    Workout(
-      id: '4',
-      title: 'Upper Body Sculpt',
-      description: 'Focus on chest, back, shoulders, and arms for definition',
-      imageUrl: '💪',
-      duration: '50 min',
-      calories: 380,
-      difficulty: 'Intermediate',
-      category: 'Strength Training',
-      equipment: 'Dumbbells, Bench',
-      focusArea: 'Upper Body',
-      exercises: [
-        WorkoutExercise(
-          id: '1',
-          name: 'Dumbbell Press',
-          description: 'Chest exercise - 4 sets of 12 reps',
-          imageUrl: '📸',
-          videoUrl: '',
-          duration: '20 min',
-          sets: 4,
-          reps: 12,
-          restTime: '60s',
-        ),
-      ],
-    ),
-  ];
+  final FirebaseFirestore? _db; // pass Firestore to enable favorites
+  final String? userId;
 
-  Future<List<WorkoutCategory>> getCategories() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return categories;
+  // caches
+  List<Workout>? _cacheAll;
+  final Map<String, List<Workout>> _cacheByCategory = {};
+  Set<String> _favoriteIds = {};
+
+  /* ----------------------- Favorites ----------------------- */
+
+  Future<void> _loadFavorites() async {
+    if (_db == null || userId == null) return;
+    final qs = await _db!
+        .collection('users')
+        .doc(userId)
+        .collection('favorites')
+        .get();
+    _favoriteIds = qs.docs.map((d) => d.id).toSet();
   }
 
+  bool _fav(String id) => _favoriteIds.contains(id);
+
+  /* ----------------------- Builders ------------------------ */
+
+  Workout _buildWorkout({
+    required String title,
+    required List<Exercise> items,
+    required WorkoutCategory category,
+    required WorkoutDifficulty difficulty,
+    String description = '',
+  }) {
+    final id =
+        '${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
+    final image = items.isNotEmpty ? items.first.gifUrl : '';
+
+    final w = WorkoutBuilder.fromExercises(
+      id: id,
+      title: title,
+      description: description.isNotEmpty
+          ? description
+          : '${category.name} session (${difficulty.name})',
+      imageUrl: image,
+      items: items.take(6).toList(), // keep ~6 items for UX
+      category: category,
+      difficulty: difficulty,
+    );
+
+    return w.copyWith(isFavorite: _fav(w.id));
+  }
+
+  Future<List<Workout>> _bootstrapCurated() async {
+    // pull several lists in parallel to keep it snappy
+    final results = await Future.wait<List<Exercise>>([
+      ExerciseApi.filter(bodyPart: 'chest', equipment: 'barbell'), // push
+      ExerciseApi.filter(bodyPart: 'back', equipment: 'barbell'), // pull
+      ExerciseApi.filter(
+          bodyPart: 'quadriceps', equipment: 'barbell'), // legs (dataset-dependent)
+      ExerciseApi.byEquipment('dumbbell'), // full body dumbbells
+    ]);
+
+    final push = _buildWorkout(
+      title: 'Push Day – Chest Focus',
+      items: results[0],
+      category: WorkoutCategory.strength,
+      difficulty: WorkoutDifficulty.intermediate,
+      description: 'Compound chest/shoulder/triceps session.',
+    );
+
+    final pull = _buildWorkout(
+      title: 'Pull Day – Back Focus',
+      items: results[1],
+      category: WorkoutCategory.strength,
+      difficulty: WorkoutDifficulty.intermediate,
+      description: 'Rows, pulls, and posterior chain.',
+    );
+
+    final legs = _buildWorkout(
+      title: 'Leg Day – Barbell',
+      items: results[2],
+      category: WorkoutCategory.strength,
+      difficulty: WorkoutDifficulty.intermediate,
+      description: 'Squat patterns and hinge variations.',
+    );
+
+    final dbFullBody = _buildWorkout(
+      title: 'Full Body – Dumbbells',
+      items: results[3],
+      category: WorkoutCategory.strength,
+      difficulty: WorkoutDifficulty.beginner,
+      description: 'Accessible total-body session.',
+    );
+
+    return [push, pull, legs, dbFullBody];
+  }
+
+  /* ----------------------- Public API ---------------------- */
+
+  Future<List<WorkoutCategory>> getCategories() async => const [
+        WorkoutCategory.strength,
+        WorkoutCategory.cardio,
+        WorkoutCategory.yoga,
+        WorkoutCategory.hiit,
+        WorkoutCategory.custom,
+      ];
+
+  /// Main feed: curated + (optional) search add-on, favorites respected.
   Future<List<Workout>> getWorkouts() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return workouts;
+    if (_cacheAll != null) return _cacheAll!;
+    await _loadFavorites();
+
+    // curated (reliable)
+    final curated = await _bootstrapCurated();
+
+    // optional: search add-on; never let a search failure break the feed
+    try {
+      // IMPORTANT: search must send `q`, not `query`
+      final searchAdds = await ExerciseApi.search('press');
+      if (searchAdds.isNotEmpty) {
+        final add = _buildWorkout(
+          title: 'Upper Body – Pressing',
+          items: searchAdds.take(6).toList(),
+          category: WorkoutCategory.strength,
+          difficulty: WorkoutDifficulty.intermediate,
+          description: 'Bench/overhead press emphasis.',
+        );
+        curated.add(add);
+      }
+    } catch (_) {
+      // swallow; curated still shows
+    }
+
+    _cacheAll = curated.map((w) => w.copyWith(isFavorite: _fav(w.id))).toList();
+    return _cacheAll!;
   }
 
-  Future<List<Workout>> getWorkoutsByCategory(String category) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return workouts.where((workout) => workout.category == category).toList();
+  /// Category feed built from ExerciseDB filters.
+  Future<List<Workout>> getWorkoutsByCategory(String categoryWire) async {
+    if (_cacheByCategory.containsKey(categoryWire)) {
+      return _cacheByCategory[categoryWire]!;
+    }
+    await _loadFavorites();
+
+    final cat = WorkoutCategoryWire.fromWire(categoryWire);
+    List<Exercise> items;
+
+    switch (cat) {
+      case WorkoutCategory.strength:
+        items = await ExerciseApi.byEquipment('barbell');
+        break;
+      case WorkoutCategory.cardio:
+        // dataset is strength-biased; approximate cardio with dynamic bodyweight
+        items = await ExerciseApi.byEquipment('body weight');
+        break;
+      case WorkoutCategory.yoga:
+        // no pure yoga; use mobility + bodyweight
+        items = await ExerciseApi.filter(equipment: 'body weight');
+        break;
+      case WorkoutCategory.hiit:
+        items = await ExerciseApi.filter(equipment: 'body weight');
+        break;
+      case WorkoutCategory.custom:
+        // list() returns a tuple; take the first element (list)
+        final tuple = await ExerciseApi.list(limit: 20, offset: 0);
+        items = tuple;
+        break;
+    }
+
+    final built = _buildWorkout(
+      title: '${cat.name} Session',
+      items: items.take(8).toList(),
+      category: cat,
+      difficulty: (cat == WorkoutCategory.hiit)
+          ? WorkoutDifficulty.advanced
+          : WorkoutDifficulty.beginner,
+      description: 'Auto-generated by filters.',
+    );
+
+    _cacheByCategory[categoryWire] = [
+      built.copyWith(isFavorite: _fav(built.id))
+    ];
+    return _cacheByCategory[categoryWire]!;
   }
 
   Future<List<Workout>> getFavoriteWorkouts() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    return workouts.where((workout) => workout.isFavorite).toList();
+    if (_db == null || userId == null) return [];
+    await _loadFavorites();
+    final all = await getWorkouts();
+    return all.where((w) => _favoriteIds.contains(w.id)).toList();
   }
 
+  /// Toggle favorite in Firestore: users/{uid}/favorites/{workoutId}
   Future<void> toggleFavorite(String workoutId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    // In a real app, this would update the database
+    if (_db == null || userId == null) return;
+    final ref = _db!
+        .collection('users')
+        .doc(userId)
+        .collection('favorites')
+        .doc(workoutId);
+
+    if (_favoriteIds.contains(workoutId)) {
+      await ref.delete();
+      _favoriteIds.remove(workoutId);
+    } else {
+      await ref.set({'ts': DateTime.now().toIso8601String()});
+      _favoriteIds.add(workoutId);
+    }
+
+    // bust caches so isFavorite recalculates
+    _cacheAll = null;
+    _cacheByCategory.clear();
   }
 
   Future<List<Workout>> getPopularWorkouts() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    // Return first 3 workouts as popular
-    return workouts.take(3).toList();
+    final all = await getWorkouts();
+    return all.take(3).toList();
   }
 }

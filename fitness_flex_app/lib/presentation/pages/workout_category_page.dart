@@ -5,7 +5,7 @@ import 'package:fitness_flex_app/presentation/pages/workout_detail_page.dart';
 
 class WorkoutCategoryPage extends StatefulWidget {
   final WorkoutRepository workoutRepository;
-  final String category;
+  final WorkoutCategory category; // ✅ enum, not String
 
   const WorkoutCategoryPage({
     super.key,
@@ -18,61 +18,49 @@ class WorkoutCategoryPage extends StatefulWidget {
 }
 
 class _WorkoutCategoryPageState extends State<WorkoutCategoryPage> {
-  late Future<List<Workout>> _categoryWorkoutsFuture;
+  late Future<List<Workout>> _future;
 
   @override
   void initState() {
     super.initState();
-    _categoryWorkoutsFuture = widget.workoutRepository.getWorkoutsByCategory(
-      widget.category,
-    );
+    _load();
   }
 
-  void _refreshData() {
-    setState(() {
-      _categoryWorkoutsFuture = widget.workoutRepository.getWorkoutsByCategory(
-        widget.category,
-      );
-    });
+  void _load() {
+    // ✅ use the enum's stable wire key
+    _future = widget.workoutRepository.getWorkoutsByCategory(widget.category.wire);
   }
+
+  void _refresh() => setState(_load);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.category),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData),
-        ],
+        // Pretty title with emoji + display name
+        title: Text('${widget.category.emoji} ${widget.category.name}'),
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _refresh)],
       ),
       body: FutureBuilder<List<Workout>>(
-        future: _categoryWorkoutsFuture,
+        future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final workouts = snapshot.data!;
-
+          final workouts = snapshot.data ?? const <Workout>[];
           if (workouts.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.fitness_center,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
+                  const Icon(Icons.fitness_center, size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
-                  Text(
-                    'No workouts found in ${widget.category}',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
+                  Text('No workouts found in ${widget.category.name}',
+                      style: const TextStyle(color: Colors.grey)),
                 ],
               ),
             );
@@ -87,75 +75,57 @@ class _WorkoutCategoryPageState extends State<WorkoutCategoryPage> {
                 margin: const EdgeInsets.only(bottom: 16),
                 child: Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              WorkoutDetailPage(workout: workout),
-                        ),
-                      );
-                    },
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WorkoutDetailPage(workout: workout),
+                      ),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          // Workout Icon
+                          // Icon / cover
                           Container(
                             width: 50,
                             height: 50,
                             decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primary.withOpacity(0.2),
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
-                              child: Text(
-                                workout.imageUrl,
-                                style: const TextStyle(fontSize: 24),
-                              ),
+                              child: Text(workout.imageUrl, style: const TextStyle(fontSize: 24)),
                             ),
                           ),
                           const SizedBox(width: 16),
 
-                          // Workout Details
+                          // Texts
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  workout.title,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                Text(workout.title,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    )),
                                 const SizedBox(height: 4),
                                 Text(
                                   '${workout.duration} • ${workout.calories} cal',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                                 ),
                               ],
                             ),
                           ),
 
-                          // Difficulty Badge
+                          // Difficulty pill
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: _getDifficultyColor(workout.difficulty),
+                              color: _difficultyColor(workout.difficulty),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -180,7 +150,7 @@ class _WorkoutCategoryPageState extends State<WorkoutCategoryPage> {
     );
   }
 
-  Color _getDifficultyColor(String difficulty) {
+  Color _difficultyColor(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'beginner':
         return Colors.green;
