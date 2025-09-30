@@ -5,6 +5,8 @@ import 'package:fitness_flex_app/presentation/pages/workout_detail_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_category_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_player_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_search_page.dart';
+import 'package:fitness_flex_app/data/models/workout_log.dart';
+import 'package:fitness_flex_app/data/repositories/workout_log_repository.dart';
 
 class WorkoutListPage extends StatefulWidget {
   const WorkoutListPage({super.key});
@@ -17,18 +19,22 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
   final WorkoutRepository _workoutRepository = WorkoutRepository();
   late Future<List<WorkoutCategory>> _categoriesFuture;
   late Future<List<Workout>> _popularWorkoutsFuture;
+  final WorkoutLogRepository _workoutLogRepository = WorkoutLogRepository();
+  late Future<List<WorkoutLog>> _todayLogsFuture;
 
   @override
   void initState() {
     super.initState();
     _categoriesFuture = _workoutRepository.getCategories();
     _popularWorkoutsFuture = _workoutRepository.getPopularWorkouts();
+    _todayLogsFuture = _workoutLogRepository.getTodayLogs();
   }
 
   void _refreshData() {
     setState(() {
       _categoriesFuture = _workoutRepository.getCategories();
       _popularWorkoutsFuture = _workoutRepository.getPopularWorkouts();
+      _todayLogsFuture = _workoutLogRepository.getTodayLogs();
     });
   }
 
@@ -38,17 +44,17 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
       appBar: AppBar(
         title: const Text('Workouts'),
         actions: [
-IconButton(
-  icon: const Icon(Icons.search),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => WorkoutSearchPage(repo: _workoutRepository),
-      ),
-    );
-  },
-),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WorkoutSearchPage(repo: _workoutRepository),
+                ),
+              );
+            },
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData),
         ],
       ),
@@ -63,20 +69,34 @@ IconButton(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Categories',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                'Work out done today',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              _buildTodayDoneSection(),
+              const SizedBox(height: 24),
+
+              const Text(
+                'Categories',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 16),
               _buildCategoriesSection(),
               const SizedBox(height: 24),
 
-              const Text('Popular Workouts',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                'Popular Workouts',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 16),
               _buildPopularWorkoutsSection(),
               const SizedBox(height: 24),
 
-              const Text('All Workouts',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                'All Workouts',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 16),
               _buildAllWorkoutsSection(),
             ],
@@ -86,7 +106,43 @@ IconButton(
     );
   }
 
-  /* ---------------------- Sections ---------------------- */
+  Widget _buildTodayDoneSection() {
+    return StreamBuilder<List<WorkoutLog>>(
+      stream: _workoutLogRepository.streamTodayLogs(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 56,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final logs = snapshot.data!;
+        if (logs.isEmpty) {
+          return const Text('No workouts completed today yet.');
+        }
+        return Column(
+          children: logs.map((log) {
+            final time = TimeOfDay.fromDateTime(log.completedAt).format(context);
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.check_circle, color: Colors.green),
+              title: Text(log.title),
+              subtitle: Text('Completed at $time'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (log.duration > 0) Text('${log.duration} min  '),
+                  if (log.calories > 0)
+                    Row(children: [const Icon(Icons.local_fire_department, size: 16), Text(' ${log.calories}')]),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
 
   Widget _buildCategoriesSection() {
     return FutureBuilder<List<WorkoutCategory>>(
@@ -142,7 +198,9 @@ IconButton(
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
-              height: 200, child: Center(child: CircularProgressIndicator()));
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          );
         }
         if (snapshot.hasError) {
           return Text(
@@ -157,7 +215,7 @@ IconButton(
         }
 
         return SizedBox(
-          height: 230,
+          height: 260, // was 230; extra room avoids overflow
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: workouts.length,
@@ -192,20 +250,23 @@ IconButton(
         final workouts = snapshot.data!;
         return Column(
           children: workouts
-              .map((w) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _workoutCard(context, w, isPopular: false),
-                  ))
+              .map(
+                (w) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _workoutCard(context, w, isPopular: false),
+                ),
+              )
               .toList(),
         );
       },
     );
   }
 
-  /* ---------------------- UI Bits ----------------------- */
-
-  Widget _workoutCard(BuildContext context, Workout workout,
-      {required bool isPopular}) {
+  Widget _workoutCard(
+    BuildContext context,
+    Workout workout, {
+    required bool isPopular,
+  }) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -220,21 +281,19 @@ IconButton(
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  // small icon/emoji thumb
                   Container(
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.15),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
@@ -256,11 +315,17 @@ IconButton(
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        Text(workout.category,
-                            style: TextStyle(
-                                fontSize: 14, color: Colors.grey[600])),
+                        Text(
+                          workout.category,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -279,7 +344,7 @@ IconButton(
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 workout.description,
                 maxLines: 2,
@@ -296,25 +361,53 @@ IconButton(
                 ],
               ),
               if (isPopular) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 6), // was 12
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: Colors.orange.withOpacity(0.25)),
+                    border: Border.all(color: Colors.orange.withOpacity(0.25)),
                   ),
                   child: const Text(
                     'POPULAR',
                     style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
                   ),
                 ),
-              ]
+              ],
+              const SizedBox(height: 6), // was 8
+              Row(
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.check),
+                    label: const Text('Mark done'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      minimumSize: const Size(0, 36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: const VisualDensity(horizontal: -2, vertical: -4),
+                    ),
+                    onPressed: () async {
+                      try {
+                        await _workoutLogRepository.logWorkout(workout);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Logged "${workout.title}"')),
+                        );
+                        // No setState needed; the StreamBuilder above will refresh.
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(SnackBar(content: Text(e.toString())));
+                      }
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -333,8 +426,6 @@ IconButton(
     );
   }
 }
-
-/* ------------------ Category Card (fixed) ------------------ */
 
 class _CategoryCard extends StatelessWidget {
   const _CategoryCard({
@@ -369,17 +460,13 @@ class _CategoryCard extends StatelessWidget {
             children: [
               Text(emoji, style: const TextStyle(fontSize: 28)),
               const SizedBox(height: 6),
-              // Flexible label prevents vertical overflow even at larger text scales
               Flexible(
                 child: Text(
                   label,
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: color),
                 ),
               ),
             ],
