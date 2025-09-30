@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fitness_flex_app/core/themes/app_theme.dart';
 import 'package:fitness_flex_app/navigation/app_router.dart';
 import 'chat_screen.dart';
+import './profile_page.dart'; // add this import (same folder)
 
 // NEW: use the repo to get live totals from Firestore
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
@@ -66,9 +67,9 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to load user data: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to load user data: $e")));
     }
   }
 
@@ -76,8 +77,10 @@ class _HomePageState extends State<HomePage> {
     if (index == 1) {
       Navigator.pushNamed(context, AppRouter.workout);
     } else if (index == 2) {
-      Navigator.pushNamed(context, AppRouter.nutrition)
-          .then((_) => setState(_loadNutritionFutures)); // refresh after returning
+      Navigator.pushNamed(
+        context,
+        AppRouter.nutrition,
+      ).then((_) => setState(_loadNutritionFutures)); // refresh after returning
     } else {
       setState(() {
         _selectedIndex = index;
@@ -88,9 +91,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final name = _userData?['firstName'] ?? "User";
@@ -129,7 +130,12 @@ class _HomePageState extends State<HomePage> {
           ),
           IconButton(
             icon: const Icon(Icons.person_outline),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfilePage()),
+              );
+            },
           ),
         ],
       ),
@@ -188,9 +194,18 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.fitness_center), label: 'Workouts'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Nutrition'),
-          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.fitness_center),
+            label: 'Workouts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.restaurant),
+            label: 'Nutrition',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.show_chart),
+            label: 'Progress',
+          ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: AppTheme.primaryColor,
@@ -248,22 +263,26 @@ class _HomePageState extends State<HomePage> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || !snapshot.hasData) {
-          return const Text("Couldn't load today's stats",
-              style: TextStyle(color: Colors.red));
+          return const Text(
+            "Couldn't load today's stats",
+            style: TextStyle(color: Colors.red),
+          );
         }
 
         final summary = snapshot.data![0] as Map<String, double>;
         final goal = snapshot.data![1] as NutritionGoal;
 
         final calories = summary['calories'] ?? 0;
-        final protein  = summary['protein']  ?? 0;
-        final carbs    = summary['carbs']    ?? 0;
-        final fat      = summary['fat']      ?? 0;
+        final protein = summary['protein'] ?? 0;
+        final carbs = summary['carbs'] ?? 0;
+        final fat = summary['fat'] ?? 0;
 
-        final calProg = goal.dailyCalories > 0 ? calories / goal.dailyCalories : 0;
-        final proProg = goal.dailyProtein  > 0 ? protein  / goal.dailyProtein  : 0;
-        final carbProg= goal.dailyCarbs    > 0 ? carbs    / goal.dailyCarbs    : 0;
-        final fatProg = goal.dailyFat      > 0 ? fat      / goal.dailyFat      : 0;
+        final calProg = goal.dailyCalories > 0
+            ? calories / goal.dailyCalories
+            : 0;
+        final proProg = goal.dailyProtein > 0 ? protein / goal.dailyProtein : 0;
+        final carbProg = goal.dailyCarbs > 0 ? carbs / goal.dailyCarbs : 0;
+        final fatProg = goal.dailyFat > 0 ? fat / goal.dailyFat : 0;
 
         return GridView.count(
           crossAxisCount: 2,
@@ -353,7 +372,9 @@ class _HomePageState extends State<HomePage> {
             LinearProgressIndicator(
               value: progress,
               backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(progress > 1 ? Colors.red : color),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                progress > 1 ? Colors.red : color,
+              ),
               borderRadius: BorderRadius.circular(10),
             ),
           ],
@@ -365,27 +386,55 @@ class _HomePageState extends State<HomePage> {
   Widget _buildWorkoutList() {
     // Placeholder for now — later hook to Firestore
     final workouts = [
-      {"name": "Chest & Triceps", "duration": "45 min", "calories": 320, "date": "Today", "icon": Icons.fitness_center},
-      {"name": "Morning Yoga", "duration": "30 min", "calories": 180, "date": "Yesterday", "icon": Icons.self_improvement},
-      {"name": "Evening Run", "duration": "35 min", "calories": 280, "date": "2 days ago", "icon": Icons.directions_run},
+      {
+        "name": "Chest & Triceps",
+        "duration": "45 min",
+        "calories": 320,
+        "date": "Today",
+        "icon": Icons.fitness_center,
+      },
+      {
+        "name": "Morning Yoga",
+        "duration": "30 min",
+        "calories": 180,
+        "date": "Yesterday",
+        "icon": Icons.self_improvement,
+      },
+      {
+        "name": "Evening Run",
+        "duration": "35 min",
+        "calories": 280,
+        "date": "2 days ago",
+        "icon": Icons.directions_run,
+      },
     ];
 
     return Column(
       children: workouts.map((workout) {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
-              child: Icon(workout['icon'] as IconData, color: AppTheme.primaryColor),
+              child: Icon(
+                workout['icon'] as IconData,
+                color: AppTheme.primaryColor,
+              ),
             ),
             title: Text(
               workout['name'] as String,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text("${workout['duration']} • ${workout['calories']} kcal"),
-            trailing: Text(workout['date'] as String, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            subtitle: Text(
+              "${workout['duration']} • ${workout['calories']} kcal",
+            ),
+            trailing: Text(
+              workout['date'] as String,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ),
         );
       }).toList(),
@@ -396,16 +445,32 @@ class _HomePageState extends State<HomePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _buildActionButton(icon: Icons.add, label: 'Start Workout', onTap: () {}),
-        _buildActionButton(icon: Icons.restaurant, label: 'Log Meal', onTap: () {
-          Navigator.pushNamed(context, AppRouter.nutrition)
-              .then((_) => setState(_loadNutritionFutures)); // refresh on return
-        }),
-        _buildActionButton(icon: Icons.water_drop, label: 'Log Water', onTap: () {
-          // keeps your water tracker behavior
-          Navigator.pushNamed(context, AppRouter.nutrition)
-              .then((_) => setState(_loadNutritionFutures));
-        }),
+        _buildActionButton(
+          icon: Icons.add,
+          label: 'Start Workout',
+          onTap: () {},
+        ),
+        _buildActionButton(
+          icon: Icons.restaurant,
+          label: 'Log Meal',
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              AppRouter.nutrition,
+            ).then((_) => setState(_loadNutritionFutures)); // refresh on return
+          },
+        ),
+        _buildActionButton(
+          icon: Icons.water_drop,
+          label: 'Log Water',
+          onTap: () {
+            // keeps your water tracker behavior
+            Navigator.pushNamed(
+              context,
+              AppRouter.nutrition,
+            ).then((_) => setState(_loadNutritionFutures));
+          },
+        ),
       ],
     );
   }
