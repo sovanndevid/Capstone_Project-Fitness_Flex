@@ -7,6 +7,8 @@ import 'package:fitness_flex_app/presentation/pages/workout_player_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_search_page.dart';
 import 'package:fitness_flex_app/data/models/workout_log.dart';
 import 'package:fitness_flex_app/data/repositories/workout_log_repository.dart';
+import 'package:fitness_flex_app/navigation/app_router.dart';
+import 'package:fitness_flex_app/core/themes/app_theme.dart';
 
 class WorkoutListPage extends StatefulWidget {
   const WorkoutListPage({super.key});
@@ -21,6 +23,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
   late Future<List<Workout>> _popularWorkoutsFuture;
   final WorkoutLogRepository _workoutLogRepository = WorkoutLogRepository();
   late Future<List<WorkoutLog>> _todayLogsFuture;
+  int _selectedIndex = 1;
 
   @override
   void initState() {
@@ -36,6 +39,25 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
       _popularWorkoutsFuture = _workoutRepository.getPopularWorkouts();
       _todayLogsFuture = _workoutLogRepository.getTodayLogs();
     });
+  }
+
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+    setState(() => _selectedIndex = index);
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, AppRouter.home);
+        break;
+      case 1:
+        // already here
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, AppRouter.nutrition);
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, AppRouter.progress);
+        break;
+    }
   }
 
   @override
@@ -102,6 +124,18 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.fitness_center), label: 'Workouts'),
+          BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Nutrition'),
+          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: AppTheme.primaryColor,
+        unselectedItemColor: Colors.grey,
+        onTap: _onItemTapped,
       ),
     );
   }

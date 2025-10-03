@@ -74,17 +74,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onItemTapped(int index) {
-    if (index == 1) {
-      Navigator.pushNamed(context, AppRouter.workout);
-    } else if (index == 2) {
-      Navigator.pushNamed(
-        context,
-        AppRouter.nutrition,
-      ).then((_) => setState(_loadNutritionFutures)); // refresh after returning
-    } else {
-      setState(() {
-        _selectedIndex = index;
-      });
+    setState(() => _selectedIndex = index);
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, AppRouter.home);
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, AppRouter.workout);
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, AppRouter.nutrition);
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, AppRouter.progress); // <-- add
+        break;
     }
   }
 

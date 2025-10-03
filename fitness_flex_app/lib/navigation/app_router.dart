@@ -10,6 +10,7 @@ import 'package:fitness_flex_app/presentation/pages/workout_list_page.dart';
 import 'package:fitness_flex_app/presentation/pages/nutrition_page.dart';
 import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart';
 import 'package:fitness_flex_app/presentation/pages/verify_email_page.dart';
+import 'package:fitness_flex_app/presentation/pages/progress_page.dart'; // <-- add
 
 // Data
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
@@ -62,6 +63,7 @@ class AppRouter {
       home: (_) => const HomePage(),
       workout: (_) => const WorkoutListPage(),
       nutrition: (_) => const NutritionPage(),
+      progress: (_) => const ProgressPage(), // <-- add
       '/mealHistory': (_) =>
           MealHistoryPage(nutritionRepository: _nutritionRepository),
 
@@ -78,6 +80,8 @@ class AppRouter {
       case workout:
         // You can change to WorkoutHome or WorkoutsScreen
         return MaterialPageRoute(builder: (_) => const WorkoutListPage());
+      case progress:
+        return MaterialPageRoute(builder: (_) => const ProgressPage());
       default:
         return MaterialPageRoute(builder: (_) => const SplashPage());
     }

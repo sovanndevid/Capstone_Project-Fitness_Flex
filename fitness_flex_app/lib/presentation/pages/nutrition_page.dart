@@ -7,6 +7,8 @@ import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart';
 import 'package:fitness_flex_app/data/models/meal.dart';
 import 'package:fitness_flex_app/data/models/nutrition_goal.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:fitness_flex_app/navigation/app_router.dart';
+import 'package:fitness_flex_app/core/themes/app_theme.dart';
 
 class NutritionPage extends StatefulWidget {
   const NutritionPage({super.key});
@@ -22,6 +24,7 @@ class _NutritionPageState extends State<NutritionPage> {
   late Future<NutritionGoal> _nutritionGoalFuture;
 
   String _selectedMealType = 'breakfast'; // <-- Add this line
+  int _selectedIndex = 2;
 
   @override
   void initState() {
@@ -39,6 +42,25 @@ class _NutritionPageState extends State<NutritionPage> {
     setState(() {
       _loadData();
     });
+  }
+
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+    setState(() => _selectedIndex = index);
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, AppRouter.home);
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, AppRouter.workout);
+        break;
+      case 2:
+        // already here
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, AppRouter.progress);
+        break;
+    }
   }
 
   @override
@@ -130,6 +152,18 @@ class _NutritionPageState extends State<NutritionPage> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.fitness_center), label: 'Workouts'),
+          BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Nutrition'),
+          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: AppTheme.primaryColor,
+        unselectedItemColor: Colors.grey,
+        onTap: _onItemTapped,
       ),
     );
   }
