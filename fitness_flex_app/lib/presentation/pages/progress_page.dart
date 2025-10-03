@@ -88,7 +88,9 @@ class _ProgressPageState extends State<ProgressPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        title: const Text('Progress'),
+        title: const Text('Progress', style: TextStyle(color: Colors.black)),
+        foregroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: RefreshIndicator(
         onRefresh: () async => _refresh(),
