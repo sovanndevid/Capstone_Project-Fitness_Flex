@@ -454,6 +454,16 @@ Widget _buildWorkoutList() {
     },
   );
 }
+String _friendlyWhen(DateTime dt) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final that = DateTime(dt.year, dt.month, dt.day);
+  final diff = today.difference(that).inDays;
+
+  if (diff == 0) return "Today";
+  if (diff == 1) return "Yesterday";
+  return "$diff days ago";
+}
 
 
 
