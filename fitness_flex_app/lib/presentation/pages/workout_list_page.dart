@@ -23,6 +23,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
   final WorkoutLogRepository _workoutLogRepository = WorkoutLogRepository();
   late Future<List<WorkoutLog>> _todayLogsFuture;
   int _selectedIndex = 1;
+  final Set<String> _favoriteWorkoutTitles = {}; // added in-memory favorites
 
   @override
   void initState() {
@@ -61,12 +62,30 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final sectionTitleStyle = const TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      letterSpacing: .2,
+      color: Colors.black, // forced black
+    );
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Workouts'),
+        title: const Text(
+          'Workouts',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.black, // forced black
+          ),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        surfaceTintColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search, color: Colors.black87),
             onPressed: () {
               Navigator.push(
                 context,
@@ -76,7 +95,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshData),
+          IconButton(icon: const Icon(Icons.refresh, color: Colors.black87), onPressed: _refreshData),
         ],
       ),
       body: RefreshIndicator(
@@ -90,35 +109,23 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Work out done today',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
+              Text('Work out done today', style: sectionTitleStyle),
+              const SizedBox(height: 10),
               _buildTodayDoneSection(),
               const SizedBox(height: 24),
 
-              const Text(
-                'Categories',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+              Text('Categories', style: sectionTitleStyle),
+              const SizedBox(height: 12),
               _buildCategoriesSection(),
               const SizedBox(height: 24),
 
-              const Text(
-                'Popular Workouts',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+              Text('Popular Workouts', style: sectionTitleStyle),
+              const SizedBox(height: 12),
               _buildPopularWorkoutsSection(),
               const SizedBox(height: 24),
 
-              const Text(
-                'All Workouts',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+              Text('All Workouts', style: sectionTitleStyle),
+              const SizedBox(height: 12),
               _buildAllWorkoutsSection(),
             ],
           ),
@@ -316,11 +323,19 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
     Workout workout, {
     required bool isPopular,
   }) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final isFav = _favoriteWorkoutTitles.contains(workout.title) || (workout.isFavorite == true);
+
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 1,
+      color: Colors.white,
+      shadowColor: Colors.black.withOpacity(.06),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: Colors.black.withOpacity(.04)),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: () {
           Navigator.push(
             context,
@@ -330,20 +345,19 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFFF0F3F7),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.black.withOpacity(.05)),
                     ),
                     child: Center(
                       child: Text(
@@ -364,14 +378,15 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black, // forced black
                           ),
                         ),
                         Text(
                           workout.category,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             color: Colors.grey[600],
                           ),
                         ),
@@ -380,15 +395,22 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                   ),
                   IconButton(
                     icon: Icon(
-                      workout.isFavorite
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      color: workout.isFavorite
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey,
+                      isFav ? Icons.favorite : Icons.favorite_border,
+                      size: 22,
+                      color: isFav ? primary : Colors.grey[500],
                     ),
+                    splashRadius: 20,
                     onPressed: () {
-                      // hook up repo.toggleFavorite(workout.id) if you want here
+                      setState(() {
+                        if (isFav) {
+                          _favoriteWorkoutTitles.remove(workout.title);
+                        } else {
+                          _favoriteWorkoutTitles.add(workout.title);
+                        }
+                      });
+
+                      // Optional: persist if a method exists:
+                      // _workoutRepository.toggleFavorite(workout);
                     },
                   ),
                 ],
@@ -398,11 +420,11 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                 workout.description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.25),
               ),
               const SizedBox(height: 12),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _stat(Icons.access_time, workout.duration),
                   _stat(Icons.local_fire_department, '${workout.calories} cal'),
@@ -410,62 +432,53 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                 ],
               ),
               if (isPopular) ...[
-                const SizedBox(height: 6), // was 12
+                const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withOpacity(0.25)),
+                    color: Colors.orange.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
                     'POPULAR',
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: .5,
+                      color: Colors.orange, // unchanged accent
                     ),
                   ),
                 ),
               ],
-              const SizedBox(height: 6), // was 8
-              Row(
-                children: [
-                  TextButton.icon(
-                    icon: const Icon(Icons.check),
-                    label: const Text('Mark done'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      minimumSize: const Size(0, 36),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: const VisualDensity(
-                        horizontal: -2,
-                        vertical: -4,
-                      ),
-                    ),
-                    onPressed: () async {
-                      try {
-                        await _workoutLogRepository.logWorkout(workout);
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Logged "${workout.title}"')),
-                        );
-                        // No setState needed; the StreamBuilder above will refresh.
-                      } catch (e) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(e.toString())));
-                      }
-                    },
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Mark done'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primary,
+                    side: BorderSide(color: primary.withOpacity(.35)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                ],
+                  onPressed: () async {
+                    try {
+                      await _workoutLogRepository.logWorkout(workout);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Logged "${workout.title}"')),
+                      );
+                      // No setState needed; the StreamBuilder above will refresh.
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(e.toString())));
+                    }
+                  },
+                ),
               ),
             ],
           ),
@@ -499,37 +512,44 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
+    final primary = Theme.of(context).colorScheme.primary;
 
-    return Material(
-      color: color.withOpacity(0.08),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          width: 128, // a little wider helps long labels
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            border: Border.all(color: color.withOpacity(0.25)),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 28)),
-              const SizedBox(height: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.bold, color: color),
-                ),
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        width: 120,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.black.withOpacity(.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(.04),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 30)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: primary,
+                height: 1.1,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
