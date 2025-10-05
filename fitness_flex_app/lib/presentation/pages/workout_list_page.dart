@@ -23,7 +23,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
   final WorkoutLogRepository _workoutLogRepository = WorkoutLogRepository();
   late Future<List<WorkoutLog>> _todayLogsFuture;
   int _selectedIndex = 1;
-  final Set<String> _favoriteWorkoutTitles = {}; // added in-memory favorites
+  final Set<String> _favoriteWorkoutTitles = {};
 
   @override
   void initState() {
@@ -49,7 +49,6 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
         Navigator.pushReplacementNamed(context, AppRouter.home);
         break;
       case 1:
-        // already here
         break;
       case 2:
         Navigator.pushReplacementNamed(context, AppRouter.nutrition);
@@ -62,11 +61,11 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final sectionTitleStyle = const TextStyle(
+    const sectionTitleStyle = TextStyle(
       fontSize: 18,
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w700,
       letterSpacing: .2,
-      color: Colors.black, // forced black
+      color: Colors.black,
     );
 
     return Scaffold(
@@ -74,10 +73,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
       appBar: AppBar(
         title: const Text(
           'Workouts',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.black, // forced black
-          ),
+          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
         ),
         elevation: 0,
         backgroundColor: Colors.white,
@@ -95,65 +91,75 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.refresh, color: Colors.black87), onPressed: _refreshData),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.black87),
+            onPressed: _refreshData,
+          ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _refreshData();
-          await Future.delayed(const Duration(milliseconds: 300));
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Work out done today', style: sectionTitleStyle),
-              const SizedBox(height: 10),
-              _buildTodayDoneSection(),
-              const SizedBox(height: 24),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFFFFFFF), Color(0xFFF5F7FA), Color(0xFFEFF3F7)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            _refreshData();
+            await Future.delayed(const Duration(milliseconds: 300));
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionCard(
+                  title: 'Work out done today',
+                  child: _buildTodayDoneSection(),
+                ),
+                const SizedBox(height: 18),
 
-              Text('Categories', style: sectionTitleStyle),
-              const SizedBox(height: 12),
-              _buildCategoriesSection(),
-              const SizedBox(height: 24),
+                _SectionCard(
+                  title: 'Categories',
+                  child: _buildCategoriesSection(),
+                ),
+                const SizedBox(height: 18),
 
-              Text('Popular Workouts', style: sectionTitleStyle),
-              const SizedBox(height: 12),
-              _buildPopularWorkoutsSection(),
-              const SizedBox(height: 24),
+                _SectionCard(
+                  title: 'Popular Workouts',
+                  child: _buildPopularWorkoutsSection(),
+                ),
+                const SizedBox(height: 18),
 
-              Text('All Workouts', style: sectionTitleStyle),
-              const SizedBox(height: 12),
-              _buildAllWorkoutsSection(),
-            ],
+                const Text('All Workouts', style: sectionTitleStyle),
+                const SizedBox(height: 10),
+                _buildAllWorkoutsSection(),
+              ],
+            ),
           ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fitness_center),
-            label: 'Workouts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant),
-            label: 'Nutrition',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.show_chart),
-            label: 'Progress',
-          ),
+        BottomNavigationBarItem(icon: Icon(Icons.fitness_center), label: 'Workouts'),
+          BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Nutrition'),
+          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: AppTheme.primaryColor,
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        elevation: 12,
       ),
     );
   }
+
+  /* ---------- Sections ---------- */
 
   Widget _buildTodayDoneSection() {
     return StreamBuilder<List<WorkoutLog>>(
@@ -167,30 +173,58 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
         }
         final logs = snapshot.data!;
         if (logs.isEmpty) {
-          return const Text('No workouts completed today yet.');
+          return Text(
+            'No workouts completed today yet.',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          );
         }
         return Column(
           children: logs.map((log) {
-            final time = TimeOfDay.fromDateTime(
-              log.completedAt,
-            ).format(context);
-            return ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.check_circle, color: Colors.green),
-              title: Text(log.title),
-              subtitle: Text('Completed at $time'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
+            final time = TimeOfDay.fromDateTime(log.completedAt).format(context);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.withOpacity(.08)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
                 children: [
-                  if (log.duration > 0) Text('${log.duration} min  '),
-                  if (log.calories > 0)
-                    Row(
+                  const Icon(Icons.check_circle, color: Colors.green),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.local_fire_department, size: 16),
-                        Text(' ${log.calories}'),
+                        Text(log.title,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 14.5)),
+                        const SizedBox(height: 2),
+                        Text('Completed at $time',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            )),
                       ],
                     ),
+                  ),
+                  if (log.duration > 0)
+                    _tinyChip(Icons.access_time, '${log.duration}m'),
+                  const SizedBox(width: 8),
+                  if (log.calories > 0)
+                    _tinyChip(Icons.local_fire_department, '${log.calories}'),
                 ],
               ),
             );
@@ -219,7 +253,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
 
         final categories = snapshot.data!;
         return SizedBox(
-          height: 112, // <- a touch taller than 100 to avoid tiny overflows
+          height: 112,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: categories.length,
@@ -248,46 +282,53 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
     );
   }
 
-  Widget _buildPopularWorkoutsSection() {
-    return FutureBuilder<List<Workout>>(
-      future: _popularWorkoutsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 200,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        if (snapshot.hasError) {
-          return Text(
-            'Popular error: ${snapshot.error}',
-            style: const TextStyle(color: Colors.red),
-          );
-        }
+Widget _buildPopularWorkoutsSection() {
+  return FutureBuilder<List<Workout>>(
+    future: _popularWorkoutsFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const SizedBox(
+          height: 260, // <- was 210; match card's real height needs
+          child: Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (snapshot.hasError) {
+        return Text(
+          'Popular error: ${snapshot.error}',
+          style: const TextStyle(color: Colors.red),
+        );
+      }
 
-        final workouts = snapshot.data!;
-        if (workouts.isEmpty) {
-          return const Text('No popular workouts yet.');
-        }
-
-        return SizedBox(
-          height: 260, // was 230; extra room avoids overflow
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: workouts.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final w = workouts[index];
-              return SizedBox(
-                width: 280,
-                child: _workoutCard(context, w, isPopular: true),
-              );
-            },
+      final workouts = snapshot.data!;
+      if (workouts.isEmpty) {
+        return Text(
+          'No popular workouts yet.',
+          style: TextStyle(
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w600,
           ),
         );
-      },
-    );
-  }
+      }
+
+      return SizedBox(
+        height: 280,// <- was 210; prevents "overflowed by 49–53 px" errors
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: workouts.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 16),
+          itemBuilder: (context, index) {
+            final w = workouts[index];
+            return SizedBox(
+              width: 280,
+              child: _workoutCard(context, w, isPopular: true),
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
 
   Widget _buildAllWorkoutsSection() {
     return FutureBuilder<List<Workout>>(
@@ -318,21 +359,24 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
     );
   }
 
+  /* ---------- Card ---------- */
+
   Widget _workoutCard(
     BuildContext context,
     Workout workout, {
     required bool isPopular,
   }) {
     final primary = Theme.of(context).colorScheme.primary;
-    final isFav = _favoriteWorkoutTitles.contains(workout.title) || (workout.isFavorite == true);
+    final isFav = _favoriteWorkoutTitles.contains(workout.title) ||
+        (workout.isFavorite == true);
 
     return Card(
-      elevation: 1,
+      elevation: 2,
       color: Colors.white,
       shadowColor: Colors.black.withOpacity(.06),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: Colors.black.withOpacity(.04)),
+        side: BorderSide(color: Colors.black.withOpacity(.05)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -348,8 +392,10 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 48,
@@ -379,15 +425,17 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black, // forced black
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
                           ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           workout.category,
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -408,9 +456,6 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                           _favoriteWorkoutTitles.add(workout.title);
                         }
                       });
-
-                      // Optional: persist if a method exists:
-                      // _workoutRepository.toggleFavorite(workout);
                     },
                   ),
                 ],
@@ -420,36 +465,46 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                 workout.description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.25),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: Colors.grey[700],
+                  height: 1.25,
+                ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              const SizedBox(height: 10),
+
+              // Wrap avoids any horizontal overflow on smaller screens.
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  _stat(Icons.access_time, workout.duration),
-                  _stat(Icons.local_fire_department, '${workout.calories} cal'),
-                  _stat(Icons.bar_chart, workout.difficulty),
+                  _statChip(Icons.access_time, workout.duration),
+                  _statChip(Icons.local_fire_department, '${workout.calories} cal'),
+                  _pillChip(
+                    _difficultyLabel(workout.difficulty),
+                    _difficultyColor(_difficultyLabel(workout.difficulty), context),
+                  ),
+                  if (isPopular)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.withOpacity(.28)),
+                      ),
+                      child: const Text(
+                        'POPULAR',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
                 ],
               ),
-              if (isPopular) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(.10),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'POPULAR',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: .5,
-                      color: Colors.orange, // unchanged accent
-                    ),
-                  ),
-                ),
-              ],
+
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerLeft,
@@ -459,9 +514,12 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: primary,
                     side: BorderSide(color: primary.withOpacity(.35)),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: () async {
                     try {
@@ -470,12 +528,10 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Logged "${workout.title}"')),
                       );
-                      // No setState needed; the StreamBuilder above will refresh.
                     } catch (e) {
                       if (!mounted) return;
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(e.toString())));
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text(e.toString())));
                     }
                   },
                 ),
@@ -487,6 +543,8 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
     );
   }
 
+  /* ---------- Small UI bits ---------- */
+
   Widget _stat(IconData icon, String text) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -495,6 +553,138 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
         const SizedBox(width: 4),
         Text(text, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
+    );
+  }
+
+  Widget _statChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.grey.shade700),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Colors.grey.shade800,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _difficultyLabel(String raw) =>
+      WorkoutDifficulty.fromWire(raw).name; // if enum mapping exists
+
+  Color _difficultyColor(String label, BuildContext context) {
+    switch (label.toLowerCase()) {
+      case 'beginner':
+        return Colors.green;
+      case 'intermediate':
+        return Colors.orange;
+      case 'advanced':
+        return Colors.redAccent;
+      default:
+        return Theme.of(context).colorScheme.primary;
+    }
+  }
+
+  Widget _pillChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(.35)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: _darken(color, .2),
+        ),
+      ),
+    );
+  }
+
+  Widget _tinyChip(IconData icon, String t) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.grey.shade700),
+          const SizedBox(width: 6),
+          Text(
+            t,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Colors.grey.shade800,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _darken(Color c, [double amount = .18]) {
+    final f = 1 - amount;
+    return Color.fromARGB(
+      c.alpha,
+      (c.red * f).round(),
+      (c.green * f).round(),
+      (c.blue * f).round(),
+    );
+  }
+}
+
+/* ---------- Reusable Section Card (matches Nutrition look) ---------- */
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _SectionCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.withOpacity(.07)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.05),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
     );
   }
 }
@@ -518,7 +708,7 @@ class _CategoryCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
       child: Container(
-        width: 120,
+        width: 128,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -544,7 +734,7 @@ class _CategoryCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: primary,
                 height: 1.1,
               ),
