@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import './history_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -19,7 +23,9 @@ class _ProfilePageState extends State<ProfilePage> {
   String _activity = 'moderate';
   String _nutritionGoal = 'maintain';
   bool _loading = true;
+  bool _uploading = false;
   User? _user;
+  String? _photoURL;
 
   @override
   void initState() {
@@ -60,6 +66,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _weightCtrl.text = (data?['weight'] ?? '').toString();
       _activity = (data?['activity'] ?? 'moderate') as String;
       _nutritionGoal = (data?['nutritionGoal'] ?? 'maintain') as String;
+      _photoURL = (data?['photoURL'] ?? user.photoURL) as String?;
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -70,17 +77,57 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _uploadProfileImage() async {
+    if (_user == null) return;
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return;
+
+      setState(() => _uploading = true);
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('users/${_user!.uid}/profile.jpg');
+
+      final bytes = await picked.readAsBytes();
+      await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+      final url = await ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.uid)
+          .update({'photoURL': url});
+
+      await _user!.updatePhotoURL(url);
+      setState(() {
+        _photoURL = url;
+        _uploading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo updated!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Image upload failed: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_user == null) return;
 
     try {
-      // Update display name in FirebaseAuth
       if (_nameCtrl.text.trim() != (_user!.displayName ?? '')) {
         await _user!.updateDisplayName(_nameCtrl.text.trim());
       }
 
-      // Merge profile fields into Firestore
       await FirebaseFirestore.instance.collection('users').doc(_user!.uid).set({
         'height': _heightCtrl.text.trim().isEmpty
             ? null
@@ -97,7 +144,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Profile updated')));
-      setState(() {}); // refresh UI
+      setState(() {});
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -109,7 +156,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
-    Navigator.of(context).pop(); // go back after sign out
+    Navigator.of(context).pop();
   }
 
   @override
@@ -148,18 +195,63 @@ class _ProfilePageState extends State<ProfilePage> {
             key: _formKey,
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 40,
-                  child: Text(
-                    (_user!.displayName?.isNotEmpty == true
-                            ? _user!.displayName!.trim()[0]
-                            : email[0])
-                        .toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                // Profile image
+                GestureDetector(
+                  onTap: _uploading ? null : _uploadProfileImage,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundImage: (_photoURL != null &&
+                                _photoURL!.isNotEmpty)
+                            ? NetworkImage(_photoURL!)
+                            : null,
+                        child: (_photoURL == null || _photoURL!.isEmpty)
+                            ? Text(
+                                (_user!.displayName?.isNotEmpty == true
+                                        ? _user!.displayName!.trim()[0]
+                                        : email[0])
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
+                      ),
+                      if (_uploading)
+                        const Positioned.fill(
+                          child: ColoredBox(
+                            color: Colors.black38,
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        bottom: 0,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _uploading ? null : _uploadProfileImage,
+                  child: const Text('Change Photo'),
                 ),
                 const SizedBox(height: 16),
 
@@ -211,26 +303,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 // Activity
                 DropdownButtonFormField<String>(
-                  initialValue: _activity,
+                  value: _activity,
                   decoration: const InputDecoration(
                     labelText: 'Activity Level',
                     prefixIcon: Icon(Icons.directions_run),
                   ),
                   items: const [
                     DropdownMenuItem(
-                      value: 'sedentary',
-                      child: Text('Sedentary'),
-                    ),
+                        value: 'sedentary', child: Text('Sedentary')),
                     DropdownMenuItem(value: 'light', child: Text('Light')),
                     DropdownMenuItem(
-                      value: 'moderate',
-                      child: Text('Moderate'),
-                    ),
+                        value: 'moderate', child: Text('Moderate')),
                     DropdownMenuItem(value: 'active', child: Text('Active')),
                     DropdownMenuItem(
-                      value: 'very_active',
-                      child: Text('Very Active'),
-                    ),
+                        value: 'very_active', child: Text('Very Active')),
                   ],
                   onChanged: (v) => setState(() => _activity = v ?? 'moderate'),
                 ),
@@ -238,7 +324,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 // Nutrition goal
                 DropdownButtonFormField<String>(
-                  initialValue: _nutritionGoal,
+                  value: _nutritionGoal,
                   decoration: const InputDecoration(
                     labelText: 'Nutrition Goal',
                     prefixIcon: Icon(Icons.restaurant),
@@ -247,9 +333,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     DropdownMenuItem(value: 'bulk', child: Text('Bulk')),
                     DropdownMenuItem(value: 'cut', child: Text('Cut')),
                     DropdownMenuItem(
-                      value: 'maintain',
-                      child: Text('Maintain'),
-                    ),
+                        value: 'maintain', child: Text('Maintain')),
                   ],
                   onChanged: (v) =>
                       setState(() => _nutritionGoal = v ?? 'maintain'),
@@ -332,7 +416,6 @@ class _TodayCombinedHistoryCard extends StatelessWidget {
         .orderBy('completedAt', descending: true)
         .snapshots();
 
-    // CHANGE: meals use 'timestamp' (not loggedAt)
     final mealsQ = FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
@@ -348,7 +431,7 @@ class _TodayCombinedHistoryCard extends StatelessWidget {
         stream: workoutsQ,
         builder: (context, workoutSnap) {
           return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: mealsQ, // use the single meals stream
+            stream: mealsQ,
             builder: (context, mealsSnap) {
               if (workoutSnap.connectionState == ConnectionState.waiting ||
                   mealsSnap.connectionState == ConnectionState.waiting) {
@@ -361,7 +444,7 @@ class _TodayCombinedHistoryCard extends StatelessWidget {
                 final err = workoutSnap.error ?? mealsSnap.error;
                 return Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text('Failed to load today\'s history: $err'),
+                  child: Text("Failed to load today's history: $err"),
                 );
               }
 
@@ -377,7 +460,6 @@ class _TodayCombinedHistoryCard extends StatelessWidget {
                 };
               }).toList();
 
-              // Meals from 'meals' by timestamp
               final meals = mDocs.map((d) {
                 final x = d.data();
                 return {
@@ -400,15 +482,15 @@ class _TodayCombinedHistoryCard extends StatelessWidget {
               );
 
               Widget sectionTitle(String text) => Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 8),
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              );
+                    padding: const EdgeInsets.only(top: 4, bottom: 8),
+                    child: Text(
+                      text,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
 
               return Padding(
                 padding: const EdgeInsets.all(16),
@@ -417,10 +499,8 @@ class _TodayCombinedHistoryCard extends StatelessWidget {
                   children: [
                     const Text(
                       'Today',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 8),
 
@@ -436,16 +516,12 @@ class _TodayCombinedHistoryCard extends StatelessWidget {
                           Chip(label: Text('${workouts.length} workouts')),
                           if (totalWorkoutMins > 0)
                             Chip(
-                              label: Text(
-                                '${totalWorkoutMins.toStringAsFixed(0)} mins',
-                              ),
-                            ),
+                                label: Text(
+                                    '${totalWorkoutMins.toStringAsFixed(0)} mins')),
                           if (totalWorkoutKcal > 0)
                             Chip(
-                              label: Text(
-                                '${totalWorkoutKcal.toStringAsFixed(0)} kcal',
-                              ),
-                            ),
+                                label: Text(
+                                    '${totalWorkoutKcal.toStringAsFixed(0)} kcal')),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -480,10 +556,8 @@ class _TodayCombinedHistoryCard extends StatelessWidget {
                           Chip(label: Text('${meals.length} meals')),
                           if (totalMealKcal > 0)
                             Chip(
-                              label: Text(
-                                '${totalMealKcal.toStringAsFixed(0)} kcal',
-                              ),
-                            ),
+                                label: Text(
+                                    '${totalMealKcal.toStringAsFixed(0)} kcal')),
                         ],
                       ),
                       const SizedBox(height: 6),
