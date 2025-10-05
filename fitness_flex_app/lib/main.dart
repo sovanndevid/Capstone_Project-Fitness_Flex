@@ -7,19 +7,41 @@ import 'package:fitness_flex_app/navigation/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // Optional: quick way to make logging work without building a full auth UI.
-  // Make sure "Anonymous" sign-in is enabled in the Firebase Console.
-  try {
-    if (FirebaseAuth.instance.currentUser == null) {
-      await FirebaseAuth.instance.signInAnonymously();
-    }
-  } catch (_) {}
+  await _initFirebase();
+  await _initAnonymousSignIn();
 
   runApp(const FitnessFlexApp());
+}
+
+/// Initialize Firebase safely (prevents duplicate-app errors)
+Future<void> _initFirebase() async {
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('✅ Firebase initialized successfully.');
+    } else {
+      debugPrint('⚠️ Firebase already initialized. Skipping.');
+    }
+  } catch (e) {
+    debugPrint('🔥 Firebase init error: $e');
+  }
+}
+
+/// Optional: Sign in anonymously for testing if user not logged in
+Future<void> _initAnonymousSignIn() async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      await FirebaseAuth.instance.signInAnonymously();
+      debugPrint('👤 Signed in anonymously.');
+    } else {
+      debugPrint('👤 Already signed in as ${user.uid}');
+    }
+  } catch (e) {
+    debugPrint('Auth error: $e');
+  }
 }
 
 class FitnessFlexApp extends StatelessWidget {
@@ -32,12 +54,9 @@ class FitnessFlexApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-
-      // AppRouter controls navigation
       initialRoute: AppRouter.splash,
       routes: AppRouter.getRoutes(),
       onGenerateRoute: AppRouter.generateRoute,
-
       debugShowCheckedModeBanner: false,
     );
   }
