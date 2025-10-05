@@ -5,8 +5,14 @@ class FormCheckMenuPage extends StatelessWidget {
   const FormCheckMenuPage({super.key});
 
   static const _exercises = <String>[
-    'Back Squat', 'Push-up', 'Deadlift', 'Bench Press',
-    'Overhead Press', 'Lunge', 'Bent-over Row', 'Plank',
+    'Back Squat',
+    'Push-up',
+    'Deadlift',
+    'Bench Press',
+    'Overhead Press',
+    'Lunge',
+    'Bent-over Row',
+    'Plank',
   ];
 
   @override
@@ -28,25 +34,44 @@ class FormCheckMenuPage extends StatelessWidget {
         ),
       ),
       child: Scaffold(
-        appBar: AppBar(title: const Text('Select Exercise')),
+        appBar: AppBar(
+          title: const Text('Select Exercise'),
+          centerTitle: true,
+        ),
         body: ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: _exercises.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, i) {
             final name = _exercises[i];
+            final isImplemented = name == 'Back Squat'; // ✅ Only squat for now
+
             return Card(
               child: ListTile(
                 leading: _iconFor(name),
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                title: Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  isImplemented
+                      ? 'Live form tracking using ML Kit'
+                      : 'Coming soon',
+                  style: TextStyle(
+                    color: isImplemented ? Colors.green[700] : Colors.grey,
+                    fontSize: 13,
+                  ),
+                ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    AppRouter.formCheck,
-                    arguments: {'exercise': name},
-                  );
-                },
+                onTap: isImplemented
+                    ? () {
+                        Navigator.pushNamed(
+                          context,
+                          AppRouter.formCheck,
+                          arguments: {'exercise': name},
+                        );
+                      }
+                    : null, // disable unimplemented ones
               ),
             );
           },

@@ -190,7 +190,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, AppRouter.formCheck),
+        onPressed: () => Navigator.pushNamed(context, AppRouter.formCheckMenu),
         icon: const Icon(Icons.camera_alt),
         label: const Text('Form Checker'),
       ),

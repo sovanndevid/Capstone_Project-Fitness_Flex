@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:fitness_flex_app/navigation/app_router.dart';
+import 'package:fitness_flex_app/features/validater_core.dart';
 
 class FormCheckerScreen extends StatefulWidget {
   const FormCheckerScreen({super.key});
@@ -16,7 +17,7 @@ class FormCheckerScreen extends StatefulWidget {
 class _FormCheckerScreenState extends State<FormCheckerScreen> {
   CameraController? _cam;
   late PoseDetector _poseDetector;
-
+  final _validator = ValidatorCore(); // ✅ our offline validatorR
   // nav/context
   String _exerciseName = 'Exercise';
 
@@ -53,8 +54,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
   void initState() {
     super.initState();
     _poseDetector = PoseDetector(options: PoseDetectorOptions());
-
-    // Read route args after first frame so ModalRoute is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args =
           (ModalRoute.of(context)?.settings.arguments ?? {}) as Map<dynamic, dynamic>;
@@ -62,7 +61,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         _exerciseName = (args['exercise'] ?? 'Exercise') as String;
       });
     });
-
     _initCamera();
   }
 
@@ -133,9 +131,8 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
   }
 
   void _updateRepState(double depth) {
-    // hysteresis so we don’t double-count
-    const downThresh = 0.022;   // 2.2% below knee -> "down"
-    const upThresh   = -0.006;  // 0.6% above knee -> count rep
+    const downThresh = 0.022;
+    const upThresh = -0.006;
     if (_fsm == 'top' && depth > downThresh) _fsm = 'down';
     if (_fsm == 'down' && depth < upThresh) {
       _fsm = 'top';
@@ -148,8 +145,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     _busy = true;
     try {
       final plane = img.planes.first;
-
-      // use sensor orientation; portrait-only MVP
       final rotation = InputImageRotationValue.fromRawValue(
             _cam?.description.sensorOrientation ?? 0,
           ) ??
@@ -172,7 +167,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       }
 
       final lm = poses.first.landmarks;
-
       final S = lm[PoseLandmarkType.leftShoulder];
       final Hh = lm[PoseLandmarkType.leftHip];
       final K = lm[PoseLandmarkType.leftKnee];
@@ -183,7 +177,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         return;
       }
 
-      // normalize to frame size for device-independent thresholds
       final W = img.width.toDouble(), Ht = img.height.toDouble();
       double nx(double v) => v / W;
       double ny(double v) => v / Ht;
@@ -196,14 +189,14 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
 
       // posture checks
       final backAng = _angle(s, h, a); // shoulder-hip-ankle
-      final depth = (h.dy - k.dy);     // + means hip below knee (image y grows downward)
-      final depthOk = depth > 0.015;   // ~1.5% of frame height
+      final depth = (h.dy - k.dy);
       final shinLen = (k - a).distance.clamp(1e-6, 1.0);
       final kneeOverToe = (k.dx - t.dx) > 0.25 * shinLen;
 
-      final backOk  = backAng >= 155;
-      final kneeOk  = !kneeOverToe;
-      final good    = backOk && depthOk && kneeOk;
+      final backOk = backAng >= ValidatorCore.kneeStandingDeg;
+      final depthOk = depth > 0.015;
+      final kneeOk = !kneeOverToe;
+      final good = backOk && depthOk && kneeOk;
 
       String cue = '';
       if (!backOk) {
@@ -214,7 +207,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         cue = 'Control knees over toes';
       }
 
-      // summary counters
       _totalFrames++;
       if (good) {
         _goodFrames++;
@@ -276,7 +268,17 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       }
     } catch (_) {}
 
-    // Navigate straight to summary page
+    final metrics = {
+      'depth': _validator.scoreDepth(110),
+      'torso': _validator.scoreTorso(20),
+      'valgus': _validator.scoreValgus(10, true),
+      'symmetry': _validator.scoreSymmetry(8, false),
+      'tempo': _validator.scoreTempo(1500, 1000),
+      'stability': _validator.scoreStability(0.02, 0.05),
+      'rom': _validator.scoreRom(45),
+    };
+    final overall = _validator.overallScore(metrics);
+
     if (!mounted) return;
     Navigator.pushNamed(
       context,
@@ -286,12 +288,14 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         'reps': _reps,
         'goodFrames': _goodFrames,
         'scoredFrames': _totalFrames,
+        'overallScore': overall,
+        'components': metrics,
         'fails': {
           'back': _cueCounts['Keep chest up / back straighter'] ?? 0,
           'depth': _cueCounts['Go deeper (hip below knee)'] ?? 0,
-          'knee':  _cueCounts['Control knees over toes'] ?? 0,
+          'knee': _cueCounts['Control knees over toes'] ?? 0,
         },
-        'timeline': _timeline.take(200).toList(), // cap for UI
+        'timeline': _timeline.take(200).toList(),
       },
     );
   }
@@ -305,10 +309,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
-                // camera
                 CameraPreview(_cam!),
-
-                // top-left exercise + reps badge
                 Positioned(
                   left: 16,
                   top: 48,
@@ -328,8 +329,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                     ),
                   ),
                 ),
-
-                // camera switch
                 Positioned(
                   right: 8,
                   top: 44,
@@ -339,12 +338,10 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                     tooltip: 'Switch camera',
                   ),
                 ),
-
-                // bottom coaching panel
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
-                    height: MediaQuery.of(context).size.height * 0.28, // ~28% screen
+                    height: MediaQuery.of(context).size.height * 0.28,
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                     decoration: BoxDecoration(
@@ -361,7 +358,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // main coaching text
                         Expanded(
                           child: Center(
                             child: Text(
@@ -379,8 +375,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                           ),
                         ),
                         const SizedBox(height: 6),
-
-                        // tiny status + reps
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -412,10 +406,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 12),
-
-                        // End session -> summary
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton(
