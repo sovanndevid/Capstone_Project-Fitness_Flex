@@ -29,14 +29,36 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
 
   // Curated chip sets (tweak to taste)
   static const _bodyParts = [
-    'chest', 'back', 'shoulders', 'upper arms', 'lower arms',
-    'upper legs', 'quadriceps', 'hamstrings', 'lower legs', 'waist',
+    'chest',
+    'back',
+    'shoulders',
+    'upper arms',
+    'lower arms',
+    'upper legs',
+    'quadriceps',
+    'hamstrings',
+    'lower legs',
+    'waist',
   ];
   static const _equipments = [
-    'barbell', 'dumbbell', 'kettlebell', 'cable', 'body weight', 'smith machine',
+    'barbell',
+    'dumbbell',
+    'kettlebell',
+    'cable',
+    'body weight',
+    'smith machine',
   ];
   static const _muscles = [
-    'biceps', 'triceps', 'lats', 'glutes', 'abs', 'calves', 'quads', 'hamstrings', 'delts', 'pecs',
+    'biceps',
+    'triceps',
+    'lats',
+    'glutes',
+    'abs',
+    'calves',
+    'quads',
+    'hamstrings',
+    'delts',
+    'pecs',
   ];
 
   @override
@@ -68,7 +90,8 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
 
     try {
       List<Exercise> hits;
-      final hasFilter = (_selectedBodyPart != null && _selectedBodyPart!.isNotEmpty) ||
+      final hasFilter =
+          (_selectedBodyPart != null && _selectedBodyPart!.isNotEmpty) ||
           (_selectedEquipment != null && _selectedEquipment!.isNotEmpty) ||
           (_selectedMuscle != null && _selectedMuscle!.isNotEmpty);
 
@@ -101,33 +124,36 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
   bool _isUrl(String s) => s.startsWith('http://') || s.startsWith('https://');
 
   // --------- Pretty, safe subtitle tags ---------
-String _tags(Exercise e) {
-  final parts = <String>{};
+  String _tags(Exercise e) {
+    final parts = <String>{};
 
-  void add(String? s) {
-    if (s != null) {
-      final t = s.trim();
-      if (t.isNotEmpty) parts.add(_titleCase(t));
+    void add(String? s) {
+      if (s != null) {
+        final t = s.trim();
+        if (t.isNotEmpty) parts.add(_titleCase(t));
+      }
     }
+
+    // These are safe in your model:
+    add(e.bodyPart);
+    add(e.equipment);
+
+    // If your model later adds a muscle field (e.g. `muscle` or `primaryMuscle`),
+    // you can include it safely like this:
+    // try { add((e as dynamic).muscle as String?); } catch (_) {}
+    // or map it properly in your Exercise model and call add(e.muscle);
+
+    return parts.join(' • ');
   }
-
-  // These are safe in your model:
-  add(e.bodyPart);
-  add(e.equipment);
-
-  // If your model later adds a muscle field (e.g. `muscle` or `primaryMuscle`),
-  // you can include it safely like this:
-  // try { add((e as dynamic).muscle as String?); } catch (_) {}
-  // or map it properly in your Exercise model and call add(e.muscle);
-
-  return parts.join(' • ');
-}
-
 
   String _titleCase(String s) {
     return s
         .split(RegExp(r'\s+'))
-        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
+        .map(
+          (w) => w.isEmpty
+              ? w
+              : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}',
+        )
         .join(' ');
   }
 
@@ -176,12 +202,27 @@ String _tags(Exercise e) {
             selectedBodyPart: _selectedBodyPart,
             selectedEquipment: _selectedEquipment,
             selectedMuscle: _selectedMuscle,
-            onTapBodyPart: (v) =>
-                setState(() => _toggleChip<String>(v, _selectedBodyPart, (x) => _selectedBodyPart = x)),
-            onTapEquipment: (v) =>
-                setState(() => _toggleChip<String>(v, _selectedEquipment, (x) => _selectedEquipment = x)),
-            onTapMuscle: (v) =>
-                setState(() => _toggleChip<String>(v, _selectedMuscle, (x) => _selectedMuscle = x)),
+            onTapBodyPart: (v) => setState(
+              () => _toggleChip<String>(
+                v,
+                _selectedBodyPart,
+                (x) => _selectedBodyPart = x,
+              ),
+            ),
+            onTapEquipment: (v) => setState(
+              () => _toggleChip<String>(
+                v,
+                _selectedEquipment,
+                (x) => _selectedEquipment = x,
+              ),
+            ),
+            onTapMuscle: (v) => setState(
+              () => _toggleChip<String>(
+                v,
+                _selectedMuscle,
+                (x) => _selectedMuscle = x,
+              ),
+            ),
             onClearAll: () {
               setState(() {
                 _selectedBodyPart = null;
@@ -206,7 +247,7 @@ String _tags(Exercise e) {
                         _selectedBodyPart,
                         _selectedEquipment,
                         _selectedMuscle,
-                      ].where((e) => e != null && e!.isNotEmpty).join(' • ');
+                      ].where((e) => e != null && e.isNotEmpty).join(' • ');
                 final w = widget.repo.buildInstantWorkout(
                   title: title.isEmpty ? 'Search' : title,
                   items: _results.take(8).toList(),
@@ -232,7 +273,10 @@ String _tags(Exercise e) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Text('Error: $_error', style: const TextStyle(color: Colors.red)),
+          child: Text(
+            'Error: $_error',
+            style: const TextStyle(color: Colors.red),
+          ),
         ),
       );
     }
@@ -256,17 +300,29 @@ String _tags(Exercise e) {
       itemBuilder: (context, i) {
         final e = _results[i];
         return Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: _isUrl(e.gifUrl)
-                  ? Image.network(e.gifUrl, width: 54, height: 54, fit: BoxFit.cover)
+                  ? Image.network(
+                      e.gifUrl,
+                      width: 54,
+                      height: 54,
+                      fit: BoxFit.cover,
+                    )
                   : Container(
                       width: 54,
                       height: 54,
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.1),
                       child: const Icon(Icons.image_outlined),
                     ),
             ),
@@ -344,7 +400,11 @@ class _FiltersBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget wrapChips(List<String> items, String? selected, void Function(String) onTap) {
+    Widget wrapChips(
+      List<String> items,
+      String? selected,
+      void Function(String) onTap,
+    ) {
       return Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -359,9 +419,9 @@ class _FiltersBar extends StatelessWidget {
       );
     }
 
-    final labelStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.bold,
-        );
+    final labelStyle = Theme.of(
+      context,
+    ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold);
 
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -372,7 +432,10 @@ class _FiltersBar extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Text('Filters', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Filters',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: onClearAll,

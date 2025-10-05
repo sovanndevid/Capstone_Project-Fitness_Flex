@@ -4,8 +4,13 @@ import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
 
 class MealHistoryPage extends StatefulWidget {
   final NutritionRepository nutritionRepository;
+  final String? initialMealType; // added
 
-  const MealHistoryPage({super.key, required this.nutritionRepository});
+  const MealHistoryPage({
+    super.key,
+    required this.nutritionRepository,
+    this.initialMealType, // added
+  });
 
   @override
   State<MealHistoryPage> createState() => _MealHistoryPageState();
@@ -121,14 +126,21 @@ class _MealHistoryPageState extends State<MealHistoryPage> {
   }
 
   Future<void> _deleteMealWithUndo(Meal meal) async {
-    final confirm = await showDialog<bool>(
+    final confirm =
+        await showDialog<bool>(
           context: context,
           builder: (d) => AlertDialog(
             title: const Text('Delete meal?'),
             content: Text('Remove "${meal.name}" from history?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('Cancel')),
-              TextButton(onPressed: () => Navigator.pop(d, true), child: const Text('Delete')),
+              TextButton(
+                onPressed: () => Navigator.pop(d, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(d, true),
+                child: const Text('Delete'),
+              ),
             ],
           ),
         ) ??
@@ -146,9 +158,9 @@ class _MealHistoryPageState extends State<MealHistoryPage> {
           onPressed: () async {
             await widget.nutritionRepository.addMeal(meal);
             setState(_loadMeals);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Meal restored')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Meal restored')));
           },
         ),
       ),

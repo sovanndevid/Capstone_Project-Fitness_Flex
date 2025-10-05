@@ -211,7 +211,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 // Activity
                 DropdownButtonFormField<String>(
-                  value: _activity,
+                  initialValue: _activity,
                   decoration: const InputDecoration(
                     labelText: 'Activity Level',
                     prefixIcon: Icon(Icons.directions_run),
@@ -238,7 +238,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 // Nutrition goal
                 DropdownButtonFormField<String>(
-                  value: _nutritionGoal,
+                  initialValue: _nutritionGoal,
                   decoration: const InputDecoration(
                     labelText: 'Nutrition Goal',
                     prefixIcon: Icon(Icons.restaurant),

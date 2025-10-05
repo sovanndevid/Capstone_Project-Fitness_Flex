@@ -7,14 +7,14 @@ import 'package:fitness_flex_app/data/models/meal.dart';
 import 'package:fitness_flex_app/data/models/water_intake.dart';
 import 'package:fitness_flex_app/data/models/nutrition_goal.dart';
 import 'package:fitness_flex_app/data/models/food_item.dart';
-import 'package:fitness_flex_app/data/models/usda_service.dart';
 import 'package:fitness_flex_app/data/models/ausnut_service.dart';
 
 /// --- Main Repository ---
 class NutritionRepository {
   // ---------- External food sources ----------
   static const String _usdaApiKey = "Akb8A33VjAPLOBkB6qcaC4tzBBhStuHK7xum8jb8";
-  static const String _usdaBaseUrl = "https://api.nal.usda.gov/fdc/v1/foods/search";
+  static const String _usdaBaseUrl =
+      "https://api.nal.usda.gov/fdc/v1/foods/search";
 
   // ---------- Firebase (for meals + goals only) ----------
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -26,10 +26,12 @@ class NutritionRepository {
     return u.uid;
   }
 
-  CollectionReference<Map<String, dynamic>> get _users => _db.collection('users');
+  CollectionReference<Map<String, dynamic>> get _users =>
+      _db.collection('users');
 
   // ---------- In-memory (leave WaterTracker as-is) ----------
-  final List<WaterIntake> _waterIntakes = [];
+  final List<WaterIntake> _waterIntakes =
+      []; // legacy (no longer primary storage)
 
   // ---------- Default goal fallback (shown if Firestore has no macros) ----------
   NutritionGoal _fallbackGoal = NutritionGoal(
@@ -51,7 +53,9 @@ class NutritionRepository {
     // USDA
     try {
       final r = await http.get(
-        Uri.parse("$_usdaBaseUrl?query=$query&pageSize=10&api_key=$_usdaApiKey"),
+        Uri.parse(
+          "$_usdaBaseUrl?query=$query&pageSize=10&api_key=$_usdaApiKey",
+        ),
       );
       if (r.statusCode == 200) {
         final data = jsonDecode(r.body) as Map<String, dynamic>;
@@ -131,11 +135,15 @@ class NutritionRepository {
     if (macros == null) return _fallbackGoal;
 
     return NutritionGoal(
-      dailyCalories: (macros['calories'] as num? ?? _fallbackGoal.dailyCalories).toDouble(),
-      dailyProtein : (macros['protein']  as num? ?? _fallbackGoal.dailyProtein ).toDouble(),
-      dailyCarbs   : (macros['carbs']    as num? ?? _fallbackGoal.dailyCarbs   ).toDouble(),
-      dailyFat     : (macros['fat']      as num? ?? _fallbackGoal.dailyFat     ).toDouble(),
-      dailyWater   : _fallbackGoal.dailyWater, // keep default unless you add it in Firestore
+      dailyCalories: (macros['calories'] as num? ?? _fallbackGoal.dailyCalories)
+          .toDouble(),
+      dailyProtein: (macros['protein'] as num? ?? _fallbackGoal.dailyProtein)
+          .toDouble(),
+      dailyCarbs: (macros['carbs'] as num? ?? _fallbackGoal.dailyCarbs)
+          .toDouble(),
+      dailyFat: (macros['fat'] as num? ?? _fallbackGoal.dailyFat).toDouble(),
+      dailyWater: _fallbackGoal
+          .dailyWater, // keep default unless you add it in Firestore
     );
   }
 
@@ -144,39 +152,66 @@ class NutritionRepository {
     await _users.doc(_uid).set({
       'macros': {
         'calories': goal.dailyCalories,
-        'protein' : goal.dailyProtein,
-        'carbs'   : goal.dailyCarbs,
-        'fat'     : goal.dailyFat,
-      }
+        'protein': goal.dailyProtein,
+        'carbs': goal.dailyCarbs,
+        'fat': goal.dailyFat,
+      },
     }, SetOptions(merge: true));
   }
 
   // ======================================================
   //                      WATER (IN-MEMORY)
-  //            <<< LEAVE AS ORIGINAL BEHAVIOR >>>
   // ======================================================
+  // ---------- WATER (Firestore persistence) ----------
+  CollectionReference<Map<String, dynamic>> get _hydrationCol =>
+      _users.doc(_uid).collection('hydration_logs');
+
   Future<void> addWaterIntake(WaterIntake waterIntake) async {
-    // Keep local behavior for now (no Firestore writes)
-    _waterIntakes.add(waterIntake);
-    await Future.delayed(const Duration(milliseconds: 50));
+    // Store both liters and milliliters for flexibility
+    await _hydrationCol.doc(waterIntake.id).set({
+      'id': waterIntake.id,
+      'date': Timestamp.fromDate(waterIntake.date),
+      'amountL': waterIntake.amount,
+      'ml': (waterIntake.amount * 1000).round(),
+      'time': waterIntake.time,
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<List<WaterIntake>> getTodayWaterIntakes() async {
-    await Future.delayed(const Duration(milliseconds: 50));
-    final today = DateTime.now();
-    return _waterIntakes.where((w) =>
-        w.date.year == today.year &&
-        w.date.month == today.month &&
-        w.date.day == today.day).toList();
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = start.add(const Duration(days: 1));
+
+    final snap = await _hydrationCol
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThan: Timestamp.fromDate(end))
+        .get();
+
+    String fmt(DateTime dt) =>
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+
+    return snap.docs.map((d) {
+      final data = d.data();
+      final ts = (data['date'] as Timestamp?)?.toDate() ?? DateTime.now();
+      final amountL =
+          (data['amountL'] as num?)?.toDouble() ??
+          ((data['ml'] as num?)?.toDouble() ?? 0) / 1000.0;
+      return WaterIntake(
+        id: (data['id'] as String?) ?? d.id,
+        date: ts,
+        amount: amountL,
+        time: (data['time'] as String?) ?? fmt(ts),
+      );
+    }).toList()..sort((a, b) => a.date.compareTo(b.date));
   }
 
   Future<double> getTodayWaterSummary() async {
-    final todays = await getTodayWaterIntakes();
-    return todays.fold<double>(0.0, (sum, w) => sum + w.amount);
+    final intakes = await getTodayWaterIntakes();
+    return intakes.fold<double>(0.0, (s, w) => s + w.amount);
   }
 
   Future<void> deleteWaterIntake(String waterId) async {
-    _waterIntakes.removeWhere((w) => w.id == waterId);
-    await Future.delayed(const Duration(milliseconds: 50));
+    await _hydrationCol.doc(waterId).delete();
   }
 }

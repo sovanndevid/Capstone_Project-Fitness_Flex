@@ -297,7 +297,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             _buildStatCard(
               title: 'Calories',
-              value: '${calories.toStringAsFixed(0)}',
+              value: calories.toStringAsFixed(0),
               subtitle: 'of ${goal.dailyCalories.toStringAsFixed(0)} kcal',
               icon: Icons.local_fire_department,
               color: Colors.orange,

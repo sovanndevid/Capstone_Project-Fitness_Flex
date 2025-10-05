@@ -10,7 +10,8 @@ import 'package:fitness_flex_app/data/models/exercise_api.dart';
 /// Helpers to convert between enum and wire/string values.
 extension WorkoutCategoryWire on WorkoutCategory {
   /// lowercase token we use in requests / routing
-  String get wire => name.toLowerCase(); // e.g. "Strength Training" -> "strength"
+  String get wire =>
+      name.toLowerCase(); // e.g. "Strength Training" -> "strength"
   static WorkoutCategory fromWire(String wire) {
     switch (wire.toLowerCase()) {
       case 'strength':
@@ -32,10 +33,8 @@ extension WorkoutCategoryWire on WorkoutCategory {
 
 /// Single dynamic repo (ExerciseDB + optional Firestore favorites).
 class WorkoutRepository {
-  WorkoutRepository({
-    FirebaseFirestore? firestore,
-    this.userId,
-  }) : _db = firestore;
+  WorkoutRepository({FirebaseFirestore? firestore, this.userId})
+    : _db = firestore;
 
   final FirebaseFirestore? _db; // pass Firestore to enable favorites
   final String? userId;
@@ -49,7 +48,7 @@ class WorkoutRepository {
 
   Future<void> _loadFavorites() async {
     if (_db == null || userId == null) return;
-    final qs = await _db!
+    final qs = await _db
         .collection('users')
         .doc(userId)
         .collection('favorites')
@@ -93,7 +92,9 @@ class WorkoutRepository {
       ExerciseApi.filter(bodyPart: 'chest', equipment: 'barbell'), // push
       ExerciseApi.filter(bodyPart: 'back', equipment: 'barbell'), // pull
       ExerciseApi.filter(
-          bodyPart: 'quadriceps', equipment: 'barbell'), // legs (dataset-dependent)
+        bodyPart: 'quadriceps',
+        equipment: 'barbell',
+      ), // legs (dataset-dependent)
       ExerciseApi.byEquipment('dumbbell'), // full body dumbbells
     ]);
 
@@ -135,12 +136,12 @@ class WorkoutRepository {
   /* ----------------------- Public API ---------------------- */
 
   Future<List<WorkoutCategory>> getCategories() async => const [
-        WorkoutCategory.strength,
-        WorkoutCategory.cardio,
-        WorkoutCategory.yoga,
-        WorkoutCategory.hiit,
-        WorkoutCategory.custom,
-      ];
+    WorkoutCategory.strength,
+    WorkoutCategory.cardio,
+    WorkoutCategory.yoga,
+    WorkoutCategory.hiit,
+    WorkoutCategory.custom,
+  ];
 
   /// Main feed: curated + (optional) search add-on, favorites respected.
   Future<List<Workout>> getWorkouts() async {
@@ -215,7 +216,7 @@ class WorkoutRepository {
     );
 
     _cacheByCategory[categoryWire] = [
-      built.copyWith(isFavorite: _fav(built.id))
+      built.copyWith(isFavorite: _fav(built.id)),
     ];
     return _cacheByCategory[categoryWire]!;
   }
@@ -230,7 +231,7 @@ class WorkoutRepository {
   /// Toggle favorite in Firestore: users/{uid}/favorites/{workoutId}
   Future<void> toggleFavorite(String workoutId) async {
     if (_db == null || userId == null) return;
-    final ref = _db!
+    final ref = _db
         .collection('users')
         .doc(userId)
         .collection('favorites')
@@ -297,9 +298,6 @@ class WorkoutRepository {
   Future<Workout?> searchToWorkout(String q) async {
     final hits = await searchExercises(q);
     if (hits.isEmpty) return null;
-    return buildInstantWorkout(
-      title: q,
-      items: hits.take(8).toList(),
-    );
+    return buildInstantWorkout(title: q, items: hits.take(8).toList());
   }
 }

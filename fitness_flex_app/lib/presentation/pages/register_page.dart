@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fitness_flex_app/presentation/pages/verify_email_page.dart';
 
-
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -70,7 +69,8 @@ class _RegisterPageState extends State<RegisterPage> {
     if (dob == null) return null;
     final now = DateTime.now();
     int age = now.year - dob.year;
-    if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
       age--;
     }
     return age < 0 ? 0 : age;
@@ -136,56 +136,55 @@ class _RegisterPageState extends State<RegisterPage> {
     });
   }
 
-Future<void> _createAccount() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _createAccount() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  if (_previewMacros == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please tap Calculate to preview macros first")),
-    );
-    return;
-  }
-
-  try {
-    final auth = FirebaseAuth.instance;
-    final userCredential = await auth.createUserWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
-    final uid = userCredential.user!.uid;
-
-    // Save profile + macros
-    await FirebaseFirestore.instance.collection("users").doc(uid).set({
-      "firstName": _firstNameController.text.trim(),
-      "lastName": _lastNameController.text.trim(),
-      "email": _emailController.text.trim(),
-      "dob": _selectedDate?.toIso8601String(),
-      "fitnessGoal": _selectedFitnessGoal,
-      "gender": _gender,
-      "weightKg": _weightController.text.trim(),
-      "heightCm": _heightController.text.trim(),
-      "activity": _activity,
-      "nutritionGoal": _nutritionGoal,
-      "createdAt": DateTime.now().toIso8601String(),
-      "macros": _previewMacros,
-    });
-
-    // Send verification email
-    await userCredential.user!.sendEmailVerification();
-
-    if (mounted) {
-      // ✅ Instead of going to Home, go to VerifyEmailPage
-      Navigator.pushReplacementNamed(context, AppRouter.verifyEmail);
+    if (_previewMacros == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please tap Calculate to preview macros first"),
+        ),
+      );
+      return;
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Registration failed: $e")),
-    );
+
+    try {
+      final auth = FirebaseAuth.instance;
+      final userCredential = await auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      final uid = userCredential.user!.uid;
+
+      // Save profile + macros
+      await FirebaseFirestore.instance.collection("users").doc(uid).set({
+        "firstName": _firstNameController.text.trim(),
+        "lastName": _lastNameController.text.trim(),
+        "email": _emailController.text.trim(),
+        "dob": _selectedDate?.toIso8601String(),
+        "fitnessGoal": _selectedFitnessGoal,
+        "gender": _gender,
+        "weightKg": _weightController.text.trim(),
+        "heightCm": _heightController.text.trim(),
+        "activity": _activity,
+        "nutritionGoal": _nutritionGoal,
+        "createdAt": DateTime.now().toIso8601String(),
+        "macros": _previewMacros,
+      });
+
+      // Send verification email
+      await userCredential.user!.sendEmailVerification();
+
+      if (mounted) {
+        // ✅ Instead of going to Home, go to VerifyEmailPage
+        Navigator.pushReplacementNamed(context, AppRouter.verifyEmail);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Registration failed: $e")));
+    }
   }
-}
-
-
-
 
   @override
   void dispose() {
@@ -215,9 +214,15 @@ Future<void> _createAccount() async {
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(height: 20),
-              Text('Create Account', style: Theme.of(context).textTheme.displayLarge),
+              Text(
+                'Create Account',
+                style: Theme.of(context).textTheme.displayLarge,
+              ),
               const SizedBox(height: 8),
-              Text('Start your fitness journey today', style: Theme.of(context).textTheme.bodyLarge),
+              Text(
+                'Start your fitness journey today',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
               const SizedBox(height: 30),
 
               Form(
@@ -230,16 +235,24 @@ Future<void> _createAccount() async {
                         Expanded(
                           child: TextFormField(
                             controller: _firstNameController,
-                            decoration: const InputDecoration(labelText: 'First Name'),
-                            validator: (value) => value == null || value.isEmpty ? 'Please enter your first name' : null,
+                            decoration: const InputDecoration(
+                              labelText: 'First Name',
+                            ),
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Please enter your first name'
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: TextFormField(
                             controller: _lastNameController,
-                            decoration: const InputDecoration(labelText: 'Last Name'),
-                            validator: (value) => value == null || value.isEmpty ? 'Please enter your last name' : null,
+                            decoration: const InputDecoration(
+                              labelText: 'Last Name',
+                            ),
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Please enter your last name'
+                                : null,
                           ),
                         ),
                       ],
@@ -255,8 +268,12 @@ Future<void> _createAccount() async {
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please enter your email';
-                        if (!value.contains('@')) return 'Please enter a valid email';
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Please enter a valid email';
+                        }
                         return null;
                       },
                     ),
@@ -274,7 +291,11 @@ Future<void> _createAccount() async {
                           _selectedDate != null
                               ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
                               : 'Select your date of birth',
-                          style: TextStyle(color: _selectedDate != null ? Colors.black : Colors.grey[600]),
+                          style: TextStyle(
+                            color: _selectedDate != null
+                                ? Colors.black
+                                : Colors.grey[600],
+                          ),
                         ),
                       ),
                     ),
@@ -286,7 +307,7 @@ Future<void> _createAccount() async {
                         labelText: 'Fitness Goal',
                         prefixIcon: Icon(Icons.fitness_center),
                       ),
-                      value: _selectedFitnessGoal,
+                      initialValue: _selectedFitnessGoal,
                       items: fitnessGoals.map((String goal) {
                         return DropdownMenuItem<String>(
                           value: goal,
@@ -299,58 +320,94 @@ Future<void> _createAccount() async {
                           _syncFitnessToNutrition(newValue);
                         });
                       },
-                      validator: (value) => value == null || value.isEmpty ? 'Please select your fitness goal' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please select your fitness goal'
+                          : null,
                     ),
                     const SizedBox(height: 20),
 
                     // NEW: Weight (kg)
                     TextFormField(
                       controller: _weightController,
-                      decoration: const InputDecoration(labelText: 'Weight (kg)', prefixIcon: Icon(Icons.monitor_weight)),
+                      decoration: const InputDecoration(
+                        labelText: 'Weight (kg)',
+                        prefixIcon: Icon(Icons.monitor_weight),
+                      ),
                       keyboardType: TextInputType.number,
-                      validator: (v) => (v == null || v.isEmpty) ? 'Enter your weight' : null,
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Enter your weight' : null,
                     ),
                     const SizedBox(height: 20),
 
                     // NEW: Height (cm)
                     TextFormField(
                       controller: _heightController,
-                      decoration: const InputDecoration(labelText: 'Height (cm)', prefixIcon: Icon(Icons.height)),
+                      decoration: const InputDecoration(
+                        labelText: 'Height (cm)',
+                        prefixIcon: Icon(Icons.height),
+                      ),
                       keyboardType: TextInputType.number,
-                      validator: (v) => (v == null || v.isEmpty) ? 'Enter your height' : null,
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Enter your height' : null,
                     ),
                     const SizedBox(height: 20),
 
                     // NEW: Gender
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Gender', prefixIcon: Icon(Icons.person)),
-                      value: _gender,
+                      decoration: const InputDecoration(
+                        labelText: 'Gender',
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      initialValue: _gender,
                       items: const ['male', 'female']
-                          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                          .map(
+                            (g) => DropdownMenuItem(value: g, child: Text(g)),
+                          )
                           .toList(),
-                      onChanged: (val) => setState(() => _gender = val ?? 'male'),
+                      onChanged: (val) =>
+                          setState(() => _gender = val ?? 'male'),
                     ),
                     const SizedBox(height: 20),
 
                     // NEW: Activity level
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Activity Level', prefixIcon: Icon(Icons.directions_run)),
-                      value: _activity,
-                      items: const ['sedentary', 'light', 'moderate', 'active', 'very_active']
-                          .map((a) => DropdownMenuItem(value: a, child: Text(a)))
-                          .toList(),
-                      onChanged: (val) => setState(() => _activity = val ?? 'moderate'),
+                      decoration: const InputDecoration(
+                        labelText: 'Activity Level',
+                        prefixIcon: Icon(Icons.directions_run),
+                      ),
+                      initialValue: _activity,
+                      items:
+                          const [
+                                'sedentary',
+                                'light',
+                                'moderate',
+                                'active',
+                                'very_active',
+                              ]
+                              .map(
+                                (a) =>
+                                    DropdownMenuItem(value: a, child: Text(a)),
+                              )
+                              .toList(),
+                      onChanged: (val) =>
+                          setState(() => _activity = val ?? 'moderate'),
                     ),
                     const SizedBox(height: 20),
 
                     // NEW: Nutrition goal (bulk/cut/maintain)
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Nutrition Goal', prefixIcon: Icon(Icons.restaurant)),
-                      value: _nutritionGoal,
+                      decoration: const InputDecoration(
+                        labelText: 'Nutrition Goal',
+                        prefixIcon: Icon(Icons.restaurant),
+                      ),
+                      initialValue: _nutritionGoal,
                       items: const ['bulk', 'cut', 'maintain']
-                          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                          .map(
+                            (g) => DropdownMenuItem(value: g, child: Text(g)),
+                          )
                           .toList(),
-                      onChanged: (val) => setState(() => _nutritionGoal = val ?? 'maintain'),
+                      onChanged: (val) =>
+                          setState(() => _nutritionGoal = val ?? 'maintain'),
                     ),
                     const SizedBox(height: 20),
 
@@ -361,14 +418,24 @@ Future<void> _createAccount() async {
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                       ),
                       obscureText: _obscurePassword,
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please enter a password';
-                        if (value.length < 6) return 'Password must be at least 6 characters';
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
                         return null;
                       },
                     ),
@@ -379,14 +446,25 @@ Future<void> _createAccount() async {
                         labelText: 'Confirm Password',
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
-                          icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off),
-                          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () => setState(
+                            () => _obscureConfirmPassword =
+                                !_obscureConfirmPassword,
+                          ),
                         ),
                       ),
                       obscureText: _obscureConfirmPassword,
                       validator: (value) {
-                        if (value == null || value.isEmpty) return 'Please confirm your password';
-                        if (value != _passwordController.text) return 'Passwords do not match';
+                        if (value == null || value.isEmpty) {
+                          return 'Please confirm your password';
+                        }
+                        if (value != _passwordController.text) {
+                          return 'Passwords do not match';
+                        }
                         return null;
                       },
                     ),
@@ -411,9 +489,14 @@ Future<void> _createAccount() async {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Recommended Macros", style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                "Recommended Macros",
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               const SizedBox(height: 8),
-                              Text("Calories: ${_previewMacros!['calories']} kcal"),
+                              Text(
+                                "Calories: ${_previewMacros!['calories']} kcal",
+                              ),
                               Text("Protein: ${_previewMacros!['protein']} g"),
                               Text("Carbs: ${_previewMacros!['carbs']} g"),
                               Text("Fat: ${_previewMacros!['fat']} g"),
@@ -439,7 +522,10 @@ Future<void> _createAccount() async {
                       children: [
                         const Text("Already have an account?"),
                         TextButton(
-                          onPressed: () => Navigator.pushReplacementNamed(context, AppRouter.login),
+                          onPressed: () => Navigator.pushReplacementNamed(
+                            context,
+                            AppRouter.login,
+                          ),
                           child: const Text('Sign In'),
                         ),
                       ],

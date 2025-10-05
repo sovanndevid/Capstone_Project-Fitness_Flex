@@ -9,8 +9,8 @@ class WorkoutCard extends StatelessWidget {
   final String? category;
   final String? difficulty;
   final bool isLiked;
-  final VoidCallback? onLike;   // ❤️ toggle
-  final VoidCallback? onTap;    // 👆 new tap handler
+  final VoidCallback? onLike; // ❤️ toggle
+  final VoidCallback? onTap; // 👆 new tap handler
 
   const WorkoutCard({
     super.key,
@@ -23,12 +23,13 @@ class WorkoutCard extends StatelessWidget {
     this.difficulty,
     this.isLiked = false,
     this.onLike,
-    this.onTap,  // ✅ added to constructor
+    this.onTap, // ✅ added to constructor
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasMeta = duration != null ||
+    final hasMeta =
+        duration != null ||
         calories != null ||
         level != null ||
         category != null ||
@@ -45,10 +46,7 @@ class WorkoutCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Title
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
 
               if (description != null) ...[
                 const SizedBox(height: 8),
@@ -60,8 +58,8 @@ class WorkoutCard extends StatelessWidget {
                 Wrap(
                   spacing: 12,
                   children: [
-                    if (duration != null) Text("${duration} min"),
-                    if (calories != null) Text("${calories} cal"),
+                    if (duration != null) Text("$duration min"),
+                    if (calories != null) Text("$calories cal"),
                     if (level != null) Text(level!),
                     if (category != null) Text(category!),
                     if (difficulty != null) Text("Difficulty: $difficulty"),

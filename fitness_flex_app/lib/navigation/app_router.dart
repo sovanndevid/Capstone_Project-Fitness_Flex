@@ -21,8 +21,6 @@ import 'package:fitness_flex_app/features/form_check/form_checker_screen.dart';
 import 'package:fitness_flex_app/features/form_check/form_check_summary_page.dart';
 
 // Screens (optional workout pages)
-import 'package:fitness_flex_app/screens/workout_home.dart';
-import 'package:fitness_flex_app/screens/workouts_screen.dart';
 
 class AppRouter {
   // 🔹 Auth & onboarding

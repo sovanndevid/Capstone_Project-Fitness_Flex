@@ -7,14 +7,14 @@ import 'package:fitness_flex_app/data/models/ausnut_service.dart';
 
 class MealLogPage extends StatefulWidget {
   final NutritionRepository nutritionRepository;
-  final String mealType;
-  final VoidCallback onMealAdded;
+  final String mealType; // ensure this exists
+  final VoidCallback? onMealAdded;
 
   const MealLogPage({
     super.key,
     required this.nutritionRepository,
     required this.mealType,
-    required this.onMealAdded,
+    this.onMealAdded,
   });
 
   @override
@@ -23,8 +23,9 @@ class MealLogPage extends StatefulWidget {
 
 class _MealLogPageState extends State<MealLogPage> {
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _servingController =
-      TextEditingController(text: '1');
+  final TextEditingController _servingController = TextEditingController(
+    text: '1',
+  );
   final TextEditingController _customFoodController = TextEditingController();
 
   List<FoodItem> _searchResults = [];
@@ -33,12 +34,14 @@ class _MealLogPageState extends State<MealLogPage> {
   bool _showCustomFoodForm = false;
 
   late String _selectedMealType;
+  late String _mealType;
 
   @override
   void initState() {
     super.initState();
     _servingController.addListener(_updateNutritionValues);
     _selectedMealType = widget.mealType;
+    _mealType = widget.mealType.toLowerCase(); // honor passed type
   }
 
   @override
@@ -54,26 +57,25 @@ class _MealLogPageState extends State<MealLogPage> {
   }
 
   /// 🔹 Enrich AUSNUT search results with details in background
-Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
-  for (final food in foods) {
-    if (food.source == "AUSNUT" && food.calories == 0) {
-      try {
-        final details = await AUSNUTService.getFoodDetails(food.id);
-        if (mounted) {
-          setState(() {
-            final index = _searchResults.indexWhere((f) => f.id == food.id);
-            if (index != -1) {
-              _searchResults[index] = details;
-            }
-          });
+  Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
+    for (final food in foods) {
+      if (food.source == "AUSNUT" && food.calories == 0) {
+        try {
+          final details = await AUSNUTService.getFoodDetails(food.id);
+          if (mounted) {
+            setState(() {
+              final index = _searchResults.indexWhere((f) => f.id == food.id);
+              if (index != -1) {
+                _searchResults[index] = details;
+              }
+            });
+          }
+        } catch (e) {
+          print("⚠️ Failed to enrich AUSNUT food: $e");
         }
-      } catch (e) {
-        print("⚠️ Failed to enrich AUSNUT food: $e");
       }
     }
   }
-}
-
 
   void _searchFood(String query) async {
     if (query.isEmpty) {
@@ -105,10 +107,12 @@ Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
       }
 
       // 2. Word contains
-      if (aName.contains(" $lowerQuery") &&
-          !bName.contains(" $lowerQuery")) return -1;
-      if (!aName.contains(" $lowerQuery") &&
-          bName.contains(" $lowerQuery")) return 1;
+      if (aName.contains(" $lowerQuery") && !bName.contains(" $lowerQuery")) {
+        return -1;
+      }
+      if (!aName.contains(" $lowerQuery") && bName.contains(" $lowerQuery")) {
+        return 1;
+      }
 
       // 3. Fallback alphabetical
       return aName.compareTo(bName);
@@ -182,7 +186,7 @@ Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
     );
 
     await widget.nutritionRepository.addMeal(meal);
-    widget.onMealAdded();
+    widget.onMealAdded?.call();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -192,10 +196,10 @@ Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
           onPressed: () async {
             try {
               await widget.nutritionRepository.deleteMeal(meal.id);
-              widget.onMealAdded();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Meal removed')),
-              );
+              widget.onMealAdded?.call();
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Meal removed')));
             } catch (_) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Failed to remove meal')),
@@ -214,6 +218,13 @@ Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
       _servingController.text = '1';
       _customFoodController.clear();
     });
+  }
+
+  Future<void> _saveMeal() async {
+    // build Meal object with mealType: _mealType
+    // await widget.nutritionRepository.addMeal(meal);
+    widget.onMealAdded?.call();
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -243,16 +254,18 @@ Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DropdownButtonFormField<String>(
-                value: _selectedMealType,
+                initialValue: _selectedMealType,
                 decoration: const InputDecoration(
                   labelText: 'Meal Type',
                   border: OutlineInputBorder(),
                 ),
                 items: ['breakfast', 'lunch', 'dinner', 'snack']
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type.capitalize()),
-                        ))
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type.capitalize()),
+                      ),
+                    )
                     .toList(),
                 onChanged: (value) {
                   if (value != null) {
@@ -309,8 +322,8 @@ Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
                 child: _selectedFood == null && !_showCustomFoodForm
                     ? _buildSearchResults()
                     : _selectedFood != null
-                        ? _buildFoodDetails()
-                        : const SizedBox(),
+                    ? _buildFoodDetails()
+                    : const SizedBox(),
               ),
 
               if (_selectedFood != null || _showCustomFoodForm) ...[
@@ -466,8 +479,10 @@ Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
         if (_selectedFood!.brand.isNotEmpty)
           Text(_selectedFood!.brand, style: TextStyle(color: Colors.grey[600])),
         if (_selectedFood!.source.isNotEmpty)
-          Text('Source: ${_selectedFood!.source}',
-              style: const TextStyle(color: Colors.grey)),
+          Text(
+            'Source: ${_selectedFood!.source}',
+            style: const TextStyle(color: Colors.grey),
+          ),
         const SizedBox(height: 20),
         TextField(
           controller: _servingController,

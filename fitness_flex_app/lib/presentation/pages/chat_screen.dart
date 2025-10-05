@@ -22,7 +22,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _addMessage("Hey there! I'm Coach AI 💪\nWhat's your fitness goal today?", false);
+    _addMessage(
+      "Hey there! I'm Coach AI 💪\nWhat's your fitness goal today?",
+      false,
+    );
   }
 
   void _handleSendMessage() async {
@@ -68,7 +71,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _handleSendImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(source: source, imageQuality: 85);
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      imageQuality: 85,
+    );
     if (image == null) return;
 
     setState(() {
@@ -244,9 +250,9 @@ class _ChatScreenState extends State<ChatScreen> {
           Flexible(
             child: Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.only(
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
                   bottomRight: Radius.circular(20),
@@ -255,16 +261,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
               child: Text(
                 message.text!,
-                style: TextStyle(
-                  color: Colors.grey[800],
-                  height: 1.4,
-                ),
+                style: TextStyle(color: Colors.grey[800], height: 1.4),
               ),
             ),
           ),
@@ -289,21 +292,17 @@ class _ChatScreenState extends State<ChatScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black12,
                   blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  offset: Offset(0, 2),
                 ),
               ],
             ),
-            child: Row(
+            child: const Row(
               mainAxisSize: MainAxisSize.min,
-              children: const [
-                _Dot(),
-                _Dot(),
-                _Dot(),
-              ],
+              children: [_Dot(), _Dot(), _Dot()],
             ),
           ),
         ],
@@ -314,13 +313,13 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
             blurRadius: 8,
-            offset: const Offset(0, -2),
+            offset: Offset(0, -2),
           ),
         ],
       ),
@@ -389,7 +388,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     decoration: InputDecoration(
                       hintText: "Ask Coach AI about nutrition or workouts...",
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(Icons.send, color: Colors.blue[600]),
                         onPressed: _handleSendMessage,

@@ -9,7 +9,8 @@ class WorkoutPlayerPage extends StatefulWidget {
     String workoutId,
     String exerciseId,
     Map<String, dynamic> log,
-  )? onSaveSet;
+  )?
+  onSaveSet;
 
   const WorkoutPlayerPage({
     super.key,
@@ -39,7 +40,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   @override
   void initState() {
     super.initState();
-    _exIndex = widget.initialExerciseIndex.clamp(0, widget.workout.exercises.length - 1);
+    _exIndex = widget.initialExerciseIndex.clamp(
+      0,
+      widget.workout.exercises.length - 1,
+    );
     _prepareForExercise();
   }
 
@@ -66,7 +70,9 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
   int _parseRestSeconds(String rest) {
     final s = rest.trim().toLowerCase();
     if (s.isEmpty) return 60;
-    if (s.endsWith('s')) return int.tryParse(s.substring(0, s.length - 1)) ?? 60;
+    if (s.endsWith('s')) {
+      return int.tryParse(s.substring(0, s.length - 1)) ?? 60;
+    }
     if (s.contains(':')) {
       final p = s.split(':');
       if (p.length == 2) {
@@ -111,9 +117,9 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         await widget.onSaveSet!(widget.workout.id, ex.id, log);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to save set: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to save set: $e')));
         }
       }
     }
@@ -161,7 +167,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
         title: const Text('Workout complete 🎉'),
         content: Text('Nice work! You finished “${widget.workout.title}”.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
@@ -199,22 +208,34 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(widget.workout.category, style: TextStyle(color: Colors.grey[600])),
+              Text(
+                widget.workout.category,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   'Exercise $progress',
-                  style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(ex.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Text(
+            ex.name,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
 
           // media
@@ -228,17 +249,38 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
           // inputs
           Row(
             children: [
-              Expanded(child: _NumberField(controller: _repsCtrl, label: 'Reps', hint: ex.reps > 0 ? '${ex.reps}' : '')),
+              Expanded(
+                child: _NumberField(
+                  controller: _repsCtrl,
+                  label: 'Reps',
+                  hint: ex.reps > 0 ? '${ex.reps}' : '',
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _NumberField(controller: _weightCtrl, label: 'Weight (kg)', hint: '')),
+              Expanded(
+                child: _NumberField(
+                  controller: _weightCtrl,
+                  label: 'Weight (kg)',
+                  hint: '',
+                ),
+              ),
               const SizedBox(width: 12),
-              Expanded(child: _NumberField(controller: _rpeCtrl, label: 'RPE', hint: '7.5')),
+              Expanded(
+                child: _NumberField(
+                  controller: _rpeCtrl,
+                  label: 'RPE',
+                  hint: '7.5',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Text('Set $_setIndex of ${ex.sets}', style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                'Set $_setIndex of ${ex.sets}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(width: 8),
               _Chip(icon: Icons.timer, label: ex.restTime),
             ],
@@ -253,10 +295,7 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
               onNext: _nextExercise,
             )
           else
-            _ActiveControls(
-              onPrev: _prevExercise,
-              onComplete: _completeSet,
-            ),
+            _ActiveControls(onPrev: _prevExercise, onComplete: _completeSet),
 
           const SizedBox(height: 20),
 
@@ -267,7 +306,10 @@ class _WorkoutPlayerPageState extends State<WorkoutPlayerPage> {
             children: [
               for (int i = 0; i < widget.workout.exercises.length; i++)
                 ChoiceChip(
-                  label: Text(widget.workout.exercises[i].name, overflow: TextOverflow.ellipsis),
+                  label: Text(
+                    widget.workout.exercises[i].name,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   selected: i == _exIndex,
                   onSelected: (_) {
                     setState(() {
@@ -342,7 +384,11 @@ class _MediaFallback extends StatelessWidget {
     return Container(
       color: theme.colorScheme.primary.withOpacity(0.06),
       child: Center(
-        child: Icon(Icons.image_not_supported, size: 42, color: theme.colorScheme.primary.withOpacity(0.6)),
+        child: Icon(
+          Icons.image_not_supported,
+          size: 42,
+          color: theme.colorScheme.primary.withOpacity(0.6),
+        ),
       ),
     );
   }
@@ -353,8 +399,12 @@ class _Shimmer extends StatefulWidget {
   State<_Shimmer> createState() => _ShimmerState();
 }
 
-class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
   @override
   void dispose() {
     _c.dispose();
@@ -404,22 +454,34 @@ class _InstructionsCardState extends State<_InstructionsCard> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.4)),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.4),
+        ),
       ),
       child: Column(
         children: [
           ListTile(
             dense: true,
-            title: const Text('Instructions', style: TextStyle(fontWeight: FontWeight.w700)),
-            trailing: IconButton(icon: Icon(icon), onPressed: () => setState(() => _expanded = !_expanded)),
+            title: const Text(
+              'Instructions',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            trailing: IconButton(
+              icon: Icon(icon),
+              onPressed: () => setState(() => _expanded = !_expanded),
+            ),
           ),
           AnimatedCrossFade(
-            crossFadeState: _expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+            crossFadeState: _expanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
             duration: const Duration(milliseconds: 200),
             firstChild: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(
-                widget.text.isNotEmpty ? widget.text : 'No instructions available.',
+                widget.text.isNotEmpty
+                    ? widget.text
+                    : 'No instructions available.',
                 style: TextStyle(color: Colors.grey[800]),
               ),
             ),
@@ -432,7 +494,11 @@ class _InstructionsCardState extends State<_InstructionsCard> {
 }
 
 class _NumberField extends StatelessWidget {
-  const _NumberField({required this.controller, required this.label, this.hint});
+  const _NumberField({
+    required this.controller,
+    required this.label,
+    this.hint,
+  });
   final TextEditingController controller;
   final String label;
   final String? hint;
@@ -447,9 +513,17 @@ class _NumberField extends StatelessWidget {
         hintText: hint,
         isDense: true,
         filled: true,
-        fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        fillColor: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.35),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -474,7 +548,13 @@ class _Chip extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: theme.colorScheme.primary),
           const SizedBox(width: 6),
-          Text(label, style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -497,7 +577,9 @@ class _ActiveControls extends StatelessWidget {
             label: const Text('Previous'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),
@@ -509,7 +591,9 @@ class _ActiveControls extends StatelessWidget {
             label: const Text('Complete Set'),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
           ),
         ),
@@ -519,7 +603,11 @@ class _ActiveControls extends StatelessWidget {
 }
 
 class _RestControls extends StatelessWidget {
-  const _RestControls({required this.secondsLeft, required this.onSkip, required this.onNext});
+  const _RestControls({
+    required this.secondsLeft,
+    required this.onSkip,
+    required this.onNext,
+  });
   final int secondsLeft;
   final VoidCallback onSkip;
   final VoidCallback onNext;
@@ -540,9 +628,18 @@ class _RestControls extends StatelessWidget {
           ),
           child: Column(
             children: [
-              const Text('Rest', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text(
+                'Rest',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 4),
-              Text('$mm:$ss', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+              Text(
+                '$mm:$ss',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ),
@@ -556,7 +653,9 @@ class _RestControls extends StatelessWidget {
                 label: const Text('Skip Rest'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
@@ -568,7 +667,9 @@ class _RestControls extends StatelessWidget {
                 label: const Text('Next Exercise'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),

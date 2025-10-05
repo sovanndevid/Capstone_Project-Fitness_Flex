@@ -109,8 +109,9 @@ class HistoryPage extends StatelessWidget {
               }
 
               final days = byDay.keys.toList()..sort((a, b) => b.compareTo(a));
-              if (days.isEmpty)
+              if (days.isEmpty) {
                 return const Center(child: Text('No history yet'));
+              }
 
               return ListView.separated(
                 itemCount: days.length,

@@ -3,7 +3,6 @@ import 'package:fitness_flex_app/data/models/workout_model.dart';
 import 'package:fitness_flex_app/data/repositories/workout_repository.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_detail_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_category_page.dart';
-import 'package:fitness_flex_app/presentation/pages/workout_player_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_search_page.dart';
 import 'package:fitness_flex_app/data/models/workout_log.dart';
 import 'package:fitness_flex_app/data/repositories/workout_log_repository.dart';
@@ -128,9 +127,18 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.fitness_center), label: 'Workouts'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Nutrition'),
-          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.fitness_center),
+            label: 'Workouts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.restaurant),
+            label: 'Nutrition',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.show_chart),
+            label: 'Progress',
+          ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: AppTheme.primaryColor,
@@ -156,7 +164,9 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
         }
         return Column(
           children: logs.map((log) {
-            final time = TimeOfDay.fromDateTime(log.completedAt).format(context);
+            final time = TimeOfDay.fromDateTime(
+              log.completedAt,
+            ).format(context);
             return ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
@@ -168,7 +178,12 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                 children: [
                   if (log.duration > 0) Text('${log.duration} min  '),
                   if (log.calories > 0)
-                    Row(children: [const Icon(Icons.local_fire_department, size: 16), Text(' ${log.calories}')]),
+                    Row(
+                      children: [
+                        const Icon(Icons.local_fire_department, size: 16),
+                        Text(' ${log.calories}'),
+                      ],
+                    ),
                 ],
               ),
             );
@@ -397,7 +412,10 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
               if (isPopular) ...[
                 const SizedBox(height: 6), // was 12
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
@@ -420,10 +438,16 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                     icon: const Icon(Icons.check),
                     label: const Text('Mark done'),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
                       minimumSize: const Size(0, 36),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: const VisualDensity(horizontal: -2, vertical: -4),
+                      visualDensity: const VisualDensity(
+                        horizontal: -2,
+                        vertical: -4,
+                      ),
                     ),
                     onPressed: () async {
                       try {
@@ -435,8 +459,9 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                         // No setState needed; the StreamBuilder above will refresh.
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(SnackBar(content: Text(e.toString())));
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(e.toString())));
                       }
                     },
                   ),
