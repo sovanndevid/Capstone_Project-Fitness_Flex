@@ -928,7 +928,10 @@ class _NutritionPageState extends State<NutritionPage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${meal.calories.toStringAsFixed(0)} kcal • ${meal.mealType}',
+                                  '${meal.calories.toStringAsFixed(0)} kcal • '
+                                  '${meal.protein.toStringAsFixed(1)}g P • '
+                                  '${meal.carbs.toStringAsFixed(1)}g C • '
+                                  '${meal.fat.toStringAsFixed(1)}g Frr ',
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     color: Colors.grey.shade600,
