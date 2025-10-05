@@ -919,10 +919,11 @@ class _NutritionPageState extends State<NutritionPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  meal.name,
-                                  style: const TextStyle(
+                                  meal.name.isEmpty ? 'Meal' : meal.name,
+                                  style: TextStyle(
                                     fontSize: 15.5,
                                     fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade900,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -1153,21 +1154,23 @@ class _SectionCard extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 16.5,
                                 fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          if (subtitle != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Text(
-                                subtitle!,
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: Colors.grey.shade600,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                                color:
+                                    Colors.black87, // ensure visible on white
                               ),
                             ),
                         ],
+                      ),
+                    ),
+                  if (subtitle != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   if (trailing != null) trailing!,
