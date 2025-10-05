@@ -386,63 +386,77 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildWorkoutList() {
-    // Placeholder for now — later hook to Firestore
-    final workouts = [
-      {
-        "name": "Chest & Triceps",
-        "duration": "45 min",
-        "calories": 320,
-        "date": "Today",
-        "icon": Icons.fitness_center,
-      },
-      {
-        "name": "Morning Yoga",
-        "duration": "30 min",
-        "calories": 180,
-        "date": "Yesterday",
-        "icon": Icons.self_improvement,
-      },
-      {
-        "name": "Evening Run",
-        "duration": "35 min",
-        "calories": 280,
-        "date": "2 days ago",
-        "icon": Icons.directions_run,
-      },
-    ];
-
-    return Column(
-      children: workouts.map((workout) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
-              child: Icon(
-                workout['icon'] as IconData,
-                color: AppTheme.primaryColor,
-              ),
-            ),
-            title: Text(
-              workout['name'] as String,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              "${workout['duration']} • ${workout['calories']} kcal",
-            ),
-            trailing: Text(
-              workout['date'] as String,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ),
-        );
-      }).toList(),
-    );
+Widget _buildWorkoutList() {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    return const Text("Sign in to see recent workouts");
   }
+
+  final q = FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .collection('workout_logs') // <-- match your repo
+      .orderBy('completedAt', descending: true) // <-- match your field
+      .limit(10);
+
+  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+    stream: q.snapshots(),
+    builder: (context, snap) {
+      if (snap.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (snap.hasError) {
+        return const Text("Couldn't load workouts", style: TextStyle(color: Colors.red));
+      }
+
+      final docs = snap.data?.docs ?? [];
+      if (docs.isEmpty) {
+        return const Text("No recent workouts yet");
+      }
+
+      return Column(
+        children: docs.map((d) {
+          final data = d.data();
+
+          // Support either schema:
+          final name = (data['title'] as String?) ??
+                       (data['name'] as String?) ??
+                       'Workout';
+
+          final duration = (data['duration'] as num?) ??
+                           (data['durationMin'] as num?) ??
+                           0;
+
+          final calories = (data['calories'] as num?) ?? 0;
+
+          final ts = data['completedAt'] ?? data['startedAt'];
+          final completedAt = (ts is Timestamp) ? ts.toDate() : DateTime.now();
+          final when = _friendlyWhen(completedAt);
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
+                child: Icon(Icons.fitness_center, color: AppTheme.primaryColor),
+              ),
+              title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text("${duration.toInt()} min • ${calories.toInt()} kcal"),
+              trailing: Text(when, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              onTap: () {
+                // e.g., open details with d.id
+              },
+            ),
+          );
+        }).toList(),
+      );
+    },
+  );
+}
+
+
+
 
   Widget _buildQuickActions() {
     return Row(
