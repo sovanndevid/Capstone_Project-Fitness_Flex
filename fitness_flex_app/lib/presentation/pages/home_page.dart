@@ -451,7 +451,13 @@ class _HomePageState extends State<HomePage> {
         _buildActionButton(
           icon: Icons.add,
           label: 'Start Workout',
-          onTap: () {},
+          onTap: () {
+            Navigator.pushNamed(context, AppRouter.workout,).then((_) => setState(_loadNutritionFutures));
+            
+
+
+
+          }
         ),
         _buildActionButton(
           icon: Icons.restaurant,
