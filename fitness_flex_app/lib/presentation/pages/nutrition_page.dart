@@ -410,7 +410,9 @@ class _NutritionPageState extends State<NutritionPage> {
         elevation: 0,
         backgroundColor: Colors.white.withOpacity(.9),
         surfaceTintColor: Colors.white,
-        title: const Text('Nutrition', style: TextStyle(color: Colors.black87)),
+        title: const Text('Nutrition', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
+        ),
+        
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black87),
         actions: [

@@ -2,12 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:fitness_flex_app/data/models/workout_model.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_player_page.dart';
 
-class WorkoutDetailPage extends StatelessWidget {
+class WorkoutDetailPage extends StatefulWidget {
   final Workout workout;
 
   const WorkoutDetailPage({super.key, required this.workout});
 
-  bool _isUrl(String s) => s.startsWith('http://') || s.startsWith('https://');
+  @override
+  State<WorkoutDetailPage> createState() => _WorkoutDetailPageState();
+}
+
+class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
+  late bool _isFav;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFav = widget.workout.isFavorite;
+  }
+
+  bool _isUrl(String s) {
+    final u = Uri.tryParse(s);
+    return u != null && (u.hasScheme && (u.scheme == 'http' || u.scheme == 'https'));
+  }
 
   Color _difficultyColor(String difficulty, BuildContext context) {
     switch (difficulty.toLowerCase()) {
@@ -16,138 +32,204 @@ class WorkoutDetailPage extends StatelessWidget {
       case 'intermediate':
         return Colors.orange;
       case 'advanced':
-        return Colors.red;
+        return Colors.redAccent;
       default:
         return Theme.of(context).colorScheme.primary;
     }
   }
 
-  Widget _heroMedia(BuildContext context, String urlOrEmoji) {
-    final bg = Theme.of(context).colorScheme.primary.withOpacity(0.2);
-    if (_isUrl(urlOrEmoji)) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Image.network(urlOrEmoji, width: 140, height: 140, fit: BoxFit.cover),
-      );
-    }
-    return Container(
-      width: 140,
-      height: 140,
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Center(child: Text(urlOrEmoji, style: const TextStyle(fontSize: 48))),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final diffColor = _difficultyColor(workout.difficulty, context);
+    final cs = Theme.of(context).colorScheme;
+    final onSurface = cs.onSurface;
+    final diffColor = _difficultyColor(widget.workout.difficulty, context);
 
     return Scaffold(
+      backgroundColor: Colors.white, // <-- solid white background as requested
       appBar: AppBar(
-        title: Text(workout.title),
+        elevation: 0,
+        backgroundColor: Colors.white, // solid white app bar
+        surfaceTintColor: Colors.white,
+        titleSpacing: 0,
+        title: Text(
+          widget.workout.title,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: Colors.black,
+              ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Back',
+        ),
         actions: [
           IconButton(
+            tooltip: 'Favorite',
             icon: Icon(
-              workout.isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: workout.isFavorite ? Theme.of(context).colorScheme.primary : null,
+              _isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              color: _isFav ? Colors.pinkAccent : Colors.black87,
             ),
             onPressed: () {
-              // Hook to repo.toggleFavorite(workout.id) if desired
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Favorite toggle not wired on detail page')),
-              );
+              setState(() => _isFav = !_isFav);
+              // Wire to your repository here if needed
             },
           ),
+          const SizedBox(width: 6),
         ],
       ),
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cover
-            Center(child: _heroMedia(context, workout.imageUrl)),
-            const SizedBox(height: 20),
-
-            // Title + category
-            Center(
-              child: Column(
+            // Cover + category
+            _Card(
+              child: Row(
                 children: [
-                  Text(
-                    workout.title,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    workout.category,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  _CoverThumb(urlOrEmoji: widget.workout.imageUrl),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.workout.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black,
+                            letterSpacing: .2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.workout.category,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black.withOpacity(.65),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 10),
 
-            // Description
-            if (workout.description.isNotEmpty) ...[
-              Text(
-                workout.description,
-                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                textAlign: TextAlign.center,
+            const SizedBox(height: 12),
+
+            // Meta chips
+            _Card(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MetaChip(icon: Icons.access_time_rounded, text: widget.workout.duration),
+                  _MetaChip(icon: Icons.local_fire_department_rounded, text: '${widget.workout.calories} cal'),
+                  _Pill(text: _cap(widget.workout.difficulty), color: diffColor),
+                ],
               ),
-              const SizedBox(height: 20),
+            ),
+
+            if (widget.workout.description.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              // Description
+              _Card(
+                child: Text(
+                  widget.workout.description,
+                  style: TextStyle(
+                    color: Colors.black.withOpacity(.85),
+                    fontSize: 14.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
             ],
 
-            // Stats row
+            const SizedBox(height: 16),
+
+            // Primary CTA
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WorkoutPlayerPage(
+                        workout: widget.workout,
+                        initialExerciseIndex: 0,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('Start Workout'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cs.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: const StadiumBorder(),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 22),
+
+            // Exercises
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _statChip(context, Icons.access_time, workout.duration),
-                _statChip(context, Icons.local_fire_department, '${workout.calories} cal'),
-                Chip(
-                  backgroundColor: diffColor.withOpacity(0.15),
-                  label: Text(
-                    workout.difficulty[0].toUpperCase() + workout.difficulty.substring(1),
-                    style: TextStyle(color: diffColor, fontWeight: FontWeight.bold),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.view_list_rounded, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'Exercises',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    letterSpacing: .2,
+                    color: Colors.black,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-
-            // Exercises list
-            const Text('Exercises', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             Column(
-              children: List.generate(workout.exercises.length, (i) {
-                final e = workout.exercises[i];
-                return _exerciseTile(context, e, index: i);
+              children: List.generate(widget.workout.exercises.length, (i) {
+                final e = widget.workout.exercises[i];
+                return _ExerciseTile(
+                  index: i + 1,
+                  exercise: e,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WorkoutPlayerPage(
+                          workout: widget.workout,
+                          initialExerciseIndex: i,
+                        ),
+                      ),
+                    );
+                  },
+                );
               }),
-            ),
-
-            const SizedBox(height: 30),
-
-            // Quick start button (starts from first exercise)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => WorkoutPlayerPage(
-                      workout: workout,
-                      initialExerciseIndex: 0,
-                    ),
-                  ),
-                ),
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Start Workout'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
             ),
           ],
         ),
@@ -155,60 +237,260 @@ class WorkoutDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _statChip(BuildContext context, IconData icon, String text) {
-    return Chip(
-      avatar: Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
-      label: Text(text, style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w600)),
-      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+}
+
+/* ─────────────────────── Minimal UI Pieces ─────────────────────── */
+
+class _Card extends StatelessWidget {
+  const _Card({required this.child, this.padding, this.radius});
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final double? radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(radius ?? 18),
+        border: Border.all(color: Colors.black.withOpacity(.06)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _CoverThumb extends StatelessWidget {
+  const _CoverThumb({required this.urlOrEmoji});
+  final String urlOrEmoji;
+
+  bool _isUrl(String s) {
+    final u = Uri.tryParse(s);
+    return u != null && (u.hasScheme && (u.scheme == 'http' || u.scheme == 'https'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bg = cs.primary.withOpacity(.10);
+
+    if (_isUrl(urlOrEmoji)) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          urlOrEmoji,
+          width: 84,
+          height: 84,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _fallback(bg),
+          loadingBuilder: (ctx, child, progress) => progress == null ? child : _fallback(bg),
+        ),
+      );
+    }
+    return _fallback(bg, emoji: urlOrEmoji.isNotEmpty ? urlOrEmoji : '🏋️');
+  }
+
+  Widget _fallback(Color bg, {String emoji = '🏋️'}) {
+    return Container(
+      width: 84,
+      height: 84,
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
+      alignment: Alignment.center,
+      child: Text(emoji, style: const TextStyle(fontSize: 34)),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: onSurface.withOpacity(.06),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: onSurface.withOpacity(.75)),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 13.5,
+              color: onSurface.withOpacity(.95),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.text, required this.color});
+  final String text;
+  final Color color;
+
+  Color _darken(Color c, [double amount = .18]) {
+    final f = 1 - amount;
+    return Color.fromARGB(c.alpha, (c.red * f).round(), (c.green * f).round(), (c.blue * f).round());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(.14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(.32)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: _darken(color, .2)),
+      ),
+    );
+  }
+}
+
+class _ExerciseTile extends StatelessWidget {
+  const _ExerciseTile({required this.index, required this.exercise, required this.onTap});
+  final int index;
+  final WorkoutExercise exercise;
+  final VoidCallback onTap;
+
+  bool _isUrl(String s) {
+    final u = Uri.tryParse(s);
+    return u != null && (u.hasScheme && (u.scheme == 'http' || u.scheme == 'https'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final onSurface = cs.onSurface;
+
+    final subtitle = StringBuffer();
+    if (exercise.description.isNotEmpty) {
+      final d = exercise.description.length > 100
+          ? '${exercise.description.substring(0, 100)}…'
+          : exercise.description;
+      subtitle.writeln(d);
+    }
+    subtitle.write('${exercise.sets} sets × ${exercise.reps} reps');
+    if (exercise.restTime.isNotEmpty) subtitle.write('  •  Rest ${exercise.restTime}');
+    if (exercise.duration.isNotEmpty) subtitle.write('  •  ${exercise.duration}');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withOpacity(.06)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.05),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // index badge
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: cs.primary.withOpacity(.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('$index', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w900)),
+              ),
+              const SizedBox(width: 10),
+              // image / emoji
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _isUrl(exercise.imageUrl)
+                    ? Image.network(
+                        exercise.imageUrl,
+                        width: 52,
+                        height: 52,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _fallbackThumb(cs),
+                        loadingBuilder: (ctx, child, progress) => progress == null ? child : _fallbackThumb(cs),
+                      )
+                    : _fallbackThumb(cs, emoji: '💪'),
+              ),
+              const SizedBox(width: 12),
+              // texts
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exercise.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 15.5),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle.toString(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.black.withOpacity(.75),
+                        fontSize: 12.5,
+                        height: 1.25,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(Icons.play_circle_fill_rounded, color: cs.primary, size: 28),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _exerciseTile(BuildContext context, WorkoutExercise e, {required int index}) {
-    Widget leading;
-    if (_isUrl(e.imageUrl)) {
-      leading = ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Image.network(e.imageUrl, width: 44, height: 44, fit: BoxFit.cover),
-      );
-    } else {
-      leading = CircleAvatar(
-        radius: 22,
-        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-        child: const Icon(Icons.fitness_center, color: Colors.black54),
-      );
-    }
-
-    final subtitle = StringBuffer();
-    if (e.description.isNotEmpty) {
-      final d = e.description.length > 120 ? '${e.description.substring(0, 120)}…' : e.description;
-      subtitle.writeln(d);
-    }
-    subtitle.write(
-      '${e.sets} sets × ${e.reps} reps  •  Rest ${e.restTime}'
-      '${e.duration.isNotEmpty ? '  •  ${e.duration}' : ''}',
-    );
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => WorkoutPlayerPage(
-                workout: workout,
-                initialExerciseIndex: index, // start the player on this exercise
-              ),
-            ),
-          );
-        },
-        leading: leading,
-        title: Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle.toString()),
-        trailing: const Icon(Icons.play_circle_fill),
+  Widget _fallbackThumb(ColorScheme cs, {String emoji = '🏋️'}) {
+    return Container(
+      width: 52,
+      height: 52,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: cs.primary.withOpacity(.10),
+        borderRadius: BorderRadius.circular(12),
       ),
+      child: Text(emoji, style: const TextStyle(fontSize: 22)),
     );
   }
 }
