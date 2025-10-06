@@ -11,6 +11,8 @@ import 'package:fitness_flex_app/presentation/pages/nutrition_page.dart';
 import 'package:fitness_flex_app/presentation/pages/meal_history_page.dart';
 import 'package:fitness_flex_app/presentation/pages/verify_email_page.dart';
 import 'package:fitness_flex_app/presentation/pages/progress_page.dart'; // <-- add
+import 'package:fitness_flex_app/presentation/pages/profile_page.dart'; // add this
+
 
 // Data
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
@@ -20,7 +22,7 @@ import 'package:fitness_flex_app/features/form_check/form_check_menu_page.dart';
 import 'package:fitness_flex_app/features/form_check/form_checker_screen.dart';
 import 'package:fitness_flex_app/features/form_check/form_check_summary_page.dart';
 
-// Screens (optional workout pages)
+
 
 class AppRouter {
   // 🔹 Auth & onboarding
@@ -69,19 +71,26 @@ class AppRouter {
       formCheckMenu: (_) => const FormCheckMenuPage(),
       formCheck: (_) => const FormCheckerScreen(),
       formCheckSummary: (_) => const FormCheckSummaryPage(),
+
+      //profile
+      profile: (_) => const ProfilePage(),
+
     };
   }
 
   /// Fallback / dynamic routes
-  static Route<dynamic> generateRoute(RouteSettings settings) {
-    switch (settings.name) {
-      case workout:
-        // You can change to WorkoutHome or WorkoutsScreen
-        return MaterialPageRoute(builder: (_) => const WorkoutListPage());
-      case progress:
-        return MaterialPageRoute(builder: (_) => const ProgressPage());
-      default:
-        return MaterialPageRoute(builder: (_) => const SplashPage());
-    }
+static Route<dynamic> generateRoute(RouteSettings settings) {
+  switch (settings.name) {
+    case workout:
+      return MaterialPageRoute(builder: (_) => const WorkoutListPage());
+    case progress:
+      return MaterialPageRoute(builder: (_) => const ProgressPage());
+    default:
+      return MaterialPageRoute(
+        builder: (_) => const Scaffold(
+          body: Center(child: Text('Route not found')),
+        ),
+      );
   }
+}
 }

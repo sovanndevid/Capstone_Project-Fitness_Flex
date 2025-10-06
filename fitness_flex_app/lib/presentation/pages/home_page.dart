@@ -11,12 +11,8 @@ import './profile_page.dart';
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
 import 'package:fitness_flex_app/data/models/nutrition_goal.dart';
 import 'form_check_camera_page.dart'; // <-- add this import
+import 'package:fitness_flex_app/navigation/app_router.dart';
 
-// Route name fallbacks (adjust to your actual registered routes)
-const String routeWorkouts = '/workouts';
-const String routeNutrition = '/nutrition';
-const String routeProgress = '/progress';
-const String routeProfile = '/profile';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -81,26 +77,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _onNavTap(int i) {
-    if (i == _selectedIndex) return;
-    setState(() => _selectedIndex = i);
-    switch (i) {
-      case 0:
-        break;
-      case 1:
-        Navigator.pushNamed(context, routeWorkouts);
-        break;
-      case 2:
-        Navigator.pushNamed(context, routeNutrition);
-        break;
-      case 3:
-        Navigator.pushNamed(context, routeProgress);
-        break;
-      case 4:
-        Navigator.pushNamed(context, routeProfile);
-        break;
-    }
+void _onNavTap(int i) {
+  if (i == _selectedIndex) return;
+  setState(() => _selectedIndex = i);
+  switch (i) {
+    case 0:
+      break;
+    case 1:
+      Navigator.pushNamed(context, AppRouter.workout);
+      break;
+    case 2:
+      Navigator.pushNamed(context, AppRouter.nutrition);
+      break;
+    case 3:
+      Navigator.pushNamed(context, AppRouter.progress);
+      break;
+    case 4:
+      Navigator.pushNamed(context, AppRouter.profile);
+      break;
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -234,9 +231,9 @@ class _HomePageState extends State<HomePage> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: _QuickActions(
-                    onWorkouts: () => Navigator.pushNamed(context, routeWorkouts),
-                    onNutrition: () => Navigator.pushNamed(context, routeNutrition),
-                    onProgress: () => Navigator.pushNamed(context, routeProgress),
+                    onWorkouts: () => Navigator.pushNamed(context, AppRouter.workout),
+                    onNutrition: () => Navigator.pushNamed(context,AppRouter.nutrition),
+                    onProgress: () => Navigator.pushNamed(context, AppRouter.progress),
                     onChat: () =>
                         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen())),
                   ),
@@ -246,7 +243,7 @@ class _HomePageState extends State<HomePage> {
                 child: _SectionHeader(
                   title: 'Recent Activity',
                   actionLabel: 'See all',
-                  onAction: () => Navigator.pushNamed(context, routeProgress),
+                  onAction: () => Navigator.pushNamed(context, AppRouter.progress),
                 ),
               ),
               SliverList.builder(
