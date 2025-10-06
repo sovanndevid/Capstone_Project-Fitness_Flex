@@ -496,30 +496,54 @@ class _NutritionPageState extends State<NutritionPage> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fitness_center),
-            label: 'Workouts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant),
-            label: 'Nutrition',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.show_chart),
-            label: 'Progress',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: AppTheme.primaryColor,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        elevation: 12,
-      ),
+      bottomNavigationBar: NavigationBar(
+  selectedIndex: 2, // Nutrition stays selected on this page
+  onDestinationSelected: (index) {
+    if (index == 2) return; // already here
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, AppRouter.home);
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, AppRouter.workout);
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, AppRouter.progress);
+        break;
+      case 4:
+        Navigator.pushReplacementNamed(context, AppRouter.profile);
+        break;
+    }
+  },
+  destinations: const [
+    NavigationDestination(
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home),
+      label: 'Home',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.fitness_center_outlined),
+      selectedIcon: Icon(Icons.fitness_center),
+      label: 'Workouts',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.restaurant_outlined),
+      selectedIcon: Icon(Icons.restaurant),
+      label: 'Nutrition',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.insights_outlined),
+      selectedIcon: Icon(Icons.insights),
+      label: 'Progress',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.person_outline),
+      selectedIcon: Icon(Icons.person),
+      label: 'Profile',
+    ),
+  ],
+),
     );
   }
 

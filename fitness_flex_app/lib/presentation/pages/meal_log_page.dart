@@ -7,7 +7,7 @@ import 'package:fitness_flex_app/data/models/ausnut_service.dart';
 
 class MealLogPage extends StatefulWidget {
   final NutritionRepository nutritionRepository;
-  final String mealType; // ensure this exists
+  final String mealType;
   final VoidCallback? onMealAdded;
 
   const MealLogPage({
@@ -23,9 +23,7 @@ class MealLogPage extends StatefulWidget {
 
 class _MealLogPageState extends State<MealLogPage> {
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _servingController = TextEditingController(
-    text: '1',
-  );
+  final TextEditingController _servingController = TextEditingController(text: '1');
   final TextEditingController _customFoodController = TextEditingController();
 
   List<FoodItem> _searchResults = [];
@@ -41,7 +39,7 @@ class _MealLogPageState extends State<MealLogPage> {
     super.initState();
     _servingController.addListener(_updateNutritionValues);
     _selectedMealType = widget.mealType;
-    _mealType = widget.mealType.toLowerCase(); // honor passed type
+    _mealType = widget.mealType.toLowerCase();
   }
 
   @override
@@ -52,26 +50,20 @@ class _MealLogPageState extends State<MealLogPage> {
     super.dispose();
   }
 
-  void _updateNutritionValues() {
-    setState(() {});
-  }
+  void _updateNutritionValues() => setState(() {});
 
-  /// 🔹 Enrich AUSNUT search results with details in background
   Future<void> _enrichAUSNUTResults(List<FoodItem> foods) async {
     for (final food in foods) {
       if (food.source == "AUSNUT" && food.calories == 0) {
         try {
           final details = await AUSNUTService.getFoodDetails(food.id);
-          if (mounted) {
-            setState(() {
-              final index = _searchResults.indexWhere((f) => f.id == food.id);
-              if (index != -1) {
-                _searchResults[index] = details;
-              }
-            });
+          if (!mounted) return;
+          final index = _searchResults.indexWhere((f) => f.id == food.id);
+          if (index != -1) {
+            setState(() => _searchResults[index] = details);
           }
         } catch (e) {
-          print("⚠️ Failed to enrich AUSNUT food: $e");
+          debugPrint("⚠️ Failed to enrich AUSNUT food: $e");
         }
       }
     }
@@ -85,36 +77,18 @@ class _MealLogPageState extends State<MealLogPage> {
       });
       return;
     }
-
-    setState(() {
-      _isSearching = true;
-    });
+    setState(() => _isSearching = true);
 
     final results = await widget.nutritionRepository.searchFood(query);
 
-    // 🔹 Client-side relevance sorting
     final lowerQuery = query.toLowerCase();
     results.sort((a, b) {
       final aName = a.name.toLowerCase();
       final bName = b.name.toLowerCase();
-
-      // 1. Exact startsWith match first
-      if (aName.startsWith(lowerQuery) && !bName.startsWith(lowerQuery)) {
-        return -1;
-      }
-      if (!aName.startsWith(lowerQuery) && bName.startsWith(lowerQuery)) {
-        return 1;
-      }
-
-      // 2. Word contains
-      if (aName.contains(" $lowerQuery") && !bName.contains(" $lowerQuery")) {
-        return -1;
-      }
-      if (!aName.contains(" $lowerQuery") && bName.contains(" $lowerQuery")) {
-        return 1;
-      }
-
-      // 3. Fallback alphabetical
+      if (aName.startsWith(lowerQuery) && !bName.startsWith(lowerQuery)) return -1;
+      if (!aName.startsWith(lowerQuery) && bName.startsWith(lowerQuery)) return 1;
+      if (aName.contains(" $lowerQuery") && !bName.contains(" $lowerQuery")) return -1;
+      if (!aName.contains(" $lowerQuery") && bName.contains(" $lowerQuery")) return 1;
       return aName.compareTo(bName);
     });
 
@@ -123,7 +97,6 @@ class _MealLogPageState extends State<MealLogPage> {
       _isSearching = false;
     });
 
-    // 🔹 Enrich AUSNUT results after sorting
     _enrichAUSNUTResults(results);
   }
 
@@ -139,9 +112,7 @@ class _MealLogPageState extends State<MealLogPage> {
   void _toggleCustomFoodForm() {
     setState(() {
       _showCustomFoodForm = !_showCustomFoodForm;
-      if (_showCustomFoodForm) {
-        _selectedFood = null;
-      }
+      if (_showCustomFoodForm) _selectedFood = null;
     });
   }
 
@@ -153,28 +124,24 @@ class _MealLogPageState extends State<MealLogPage> {
     double calories, protein, carbs, fat;
 
     if (_showCustomFoodForm) {
-      mealName = _customFoodController.text.isNotEmpty
-          ? _customFoodController.text
-          : 'Custom Meal';
+      mealName = _customFoodController.text.isNotEmpty ? _customFoodController.text : 'Custom Meal';
       calories = 200 * servingSize;
       protein = 15 * servingSize;
       carbs = 25 * servingSize;
       fat = 8 * servingSize;
     } else {
-      final servingFactor = servingSize / _selectedFood!.servingSize;
+      final factor = servingSize / _selectedFood!.servingSize;
       mealName = _selectedFood!.name;
-      calories = _selectedFood!.calories * servingFactor;
-      protein = _selectedFood!.protein * servingFactor;
-      carbs = _selectedFood!.carbs * servingFactor;
-      fat = _selectedFood!.fat * servingFactor;
+      calories = _selectedFood!.calories * factor;
+      protein = _selectedFood!.protein * factor;
+      carbs = _selectedFood!.carbs * factor;
+      fat = _selectedFood!.fat * factor;
     }
 
     final meal = Meal(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: mealName,
-      description: _showCustomFoodForm
-          ? 'Custom food'
-          : '${_selectedFood!.brand} (${_selectedFood!.source})',
+      description: _showCustomFoodForm ? 'Custom food' : '${_selectedFood!.brand} (${_selectedFood!.source})',
       imageUrl: '🍽️',
       calories: calories,
       protein: protein,
@@ -188,6 +155,7 @@ class _MealLogPageState extends State<MealLogPage> {
     await widget.nutritionRepository.addMeal(meal);
     widget.onMealAdded?.call();
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${_selectedMealType.capitalize()} logged'),
@@ -197,13 +165,17 @@ class _MealLogPageState extends State<MealLogPage> {
             try {
               await widget.nutritionRepository.deleteMeal(meal.id);
               widget.onMealAdded?.call();
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Meal removed')));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Meal removed')),
+                );
+              }
             } catch (_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Failed to remove meal')),
-              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Failed to remove meal')),
+                );
+              }
             }
           },
         ),
@@ -221,31 +193,18 @@ class _MealLogPageState extends State<MealLogPage> {
   }
 
   Future<void> _saveMeal() async {
-    // build Meal object with mealType: _mealType
-    // await widget.nutritionRepository.addMeal(meal);
     widget.onMealAdded?.call();
     if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Log ${_selectedMealType.capitalize()}'),
-        actions: [
-          if (_selectedFood != null || _showCustomFoodForm)
-            IconButton(
-              icon: const Icon(Icons.clear),
-              onPressed: () {
-                setState(() {
-                  _selectedFood = null;
-                  _showCustomFoodForm = false;
-                  _servingController.text = '1';
-                  _customFoodController.clear();
-                });
-              },
-            ),
-        ],
+        // AppTheme already sets centerTitle, bg/fg colors.
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -254,24 +213,15 @@ class _MealLogPageState extends State<MealLogPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DropdownButtonFormField<String>(
-                initialValue: _selectedMealType,
+                value: _selectedMealType,
                 decoration: const InputDecoration(
                   labelText: 'Meal Type',
-                  border: OutlineInputBorder(),
+                  // no border override → uses global InputDecorationTheme (filled, rounded)
                 ),
-                items: ['breakfast', 'lunch', 'dinner', 'snack']
-                    .map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type.capitalize()),
-                      ),
-                    )
+                items: const ['breakfast', 'lunch', 'dinner', 'snack']
+                    .map((type) => DropdownMenuItem(value: type, child: Text(type.capitalize())))
                     .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selectedMealType = value);
-                  }
-                },
+                onChanged: (value) => setState(() => _selectedMealType = value ?? _selectedMealType),
               ),
               const SizedBox(height: 16),
 
@@ -300,30 +250,26 @@ class _MealLogPageState extends State<MealLogPage> {
                   IconButton(
                     icon: Icon(
                       _showCustomFoodForm ? Icons.search : Icons.add,
-                      color: _showCustomFoodForm
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
+                      color: _showCustomFoodForm ? theme.colorScheme.primary : null,
                     ),
                     onPressed: _toggleCustomFoodForm,
-                    tooltip: _showCustomFoodForm
-                        ? 'Search food'
-                        : 'Add custom food',
+                    tooltip: _showCustomFoodForm ? 'Search food' : 'Add custom food',
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              if (_showCustomFoodForm) _buildCustomFoodForm(),
+              if (_showCustomFoodForm) _buildCustomFoodForm(theme),
 
               ConstrainedBox(
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(context).size.height * 0.5,
                 ),
                 child: _selectedFood == null && !_showCustomFoodForm
-                    ? _buildSearchResults()
+                    ? _buildSearchResults(theme)
                     : _selectedFood != null
-                    ? _buildFoodDetails()
-                    : const SizedBox(),
+                        ? _buildFoodDetails(theme)
+                        : const SizedBox(),
               ),
 
               if (_selectedFood != null || _showCustomFoodForm) ...[
@@ -343,16 +289,15 @@ class _MealLogPageState extends State<MealLogPage> {
     );
   }
 
-  Widget _buildCustomFoodForm() {
+  Widget _buildCustomFoodForm(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Add Custom Food',
-          style: TextStyle(
+          style: theme.textTheme.displayMedium?.copyWith(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
+            color: theme.colorScheme.primary,
           ),
         ),
         const SizedBox(height: 12),
@@ -360,7 +305,6 @@ class _MealLogPageState extends State<MealLogPage> {
           controller: _customFoodController,
           decoration: const InputDecoration(
             labelText: 'Food Name',
-            border: OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 12),
@@ -368,72 +312,50 @@ class _MealLogPageState extends State<MealLogPage> {
           controller: _servingController,
           decoration: const InputDecoration(
             labelText: 'Serving Size',
-            border: OutlineInputBorder(),
             suffixText: 'g',
           ),
           keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Estimated Nutrition (per serving):',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNutritionFact('200', 'kcal', Colors.orange),
-            _buildNutritionFact('15', 'g protein', Colors.blue),
-            _buildNutritionFact('25', 'g carbs', Colors.green),
-            _buildNutritionFact('8', 'g fat', Colors.red),
+            _buildNutritionFact(theme, '200', 'kcal', theme.colorScheme.secondary),
+            _buildNutritionFact(theme, '15', 'g protein', theme.colorScheme.primary),
+            _buildNutritionFact(theme, '25', 'g carbs', theme.colorScheme.tertiaryContainer.withOpacity(.90)),
+            _buildNutritionFact(theme, '8', 'g fat', theme.colorScheme.error),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildSearchResults() {
+  Widget _buildSearchResults(ThemeData theme) {
     if (_isSearching) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (_searchResults.isEmpty && _searchController.text.isNotEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.fastfood, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text('No results found'),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: _toggleCustomFoodForm,
-              child: const Text('Add as custom food'),
-            ),
-          ],
-        ),
+      return _EmptyState(
+        icon: Icons.fastfood,
+        title: 'No results found',
+        actionLabel: 'Add as custom food',
+        onAction: _toggleCustomFoodForm,
       );
     }
 
     if (_searchResults.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.search, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text('Search for food to log'),
-            const Text(
-              'Example: chicken, rice, banana',
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: _toggleCustomFoodForm,
-              child: const Text('Or add custom food'),
-            ),
-          ],
-        ),
+      return _EmptyState(
+        icon: Icons.search,
+        title: 'Search for food to log',
+        subtitle: 'Example: chicken, rice, banana',
+        actionOutlinedLabel: 'Or add custom food',
+        onAction: _toggleCustomFoodForm,
       );
     }
 
@@ -444,10 +366,11 @@ class _MealLogPageState extends State<MealLogPage> {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: const Icon(Icons.restaurant),
-            title: Text(food.name),
+            leading: Icon(Icons.restaurant, color: theme.colorScheme.primary),
+            title: Text(food.name, style: theme.textTheme.bodyLarge),
             subtitle: Text(
               "${food.calories} kcal per ${food.servingSize}${food.servingUnit}\nSource: ${food.source}",
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(.6)),
             ),
             trailing: Text(
               '${food.protein}P ${food.carbs}C ${food.fat}F',
@@ -460,87 +383,107 @@ class _MealLogPageState extends State<MealLogPage> {
     );
   }
 
-  Widget _buildFoodDetails() {
+  Widget _buildFoodDetails(ThemeData theme) {
     final servingSize = double.tryParse(_servingController.text) ?? 1;
-    final servingFactor = servingSize / _selectedFood!.servingSize;
+    final factor = servingSize / _selectedFood!.servingSize;
 
-    final calories = _selectedFood!.calories * servingFactor;
-    final protein = _selectedFood!.protein * servingFactor;
-    final carbs = _selectedFood!.carbs * servingFactor;
-    final fat = _selectedFood!.fat * servingFactor;
+    final calories = _selectedFood!.calories * factor;
+    final protein = _selectedFood!.protein * factor;
+    final carbs = _selectedFood!.carbs * factor;
+    final fat = _selectedFood!.fat * factor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _selectedFood!.name,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
+        Text(_selectedFood!.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         if (_selectedFood!.brand.isNotEmpty)
-          Text(_selectedFood!.brand, style: TextStyle(color: Colors.grey[600])),
+          Text(_selectedFood!.brand, style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(.6))),
         if (_selectedFood!.source.isNotEmpty)
-          Text(
-            'Source: ${_selectedFood!.source}',
-            style: const TextStyle(color: Colors.grey),
-          ),
+          Text('Source: ${_selectedFood!.source}',
+              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(.6))),
         const SizedBox(height: 20),
         TextField(
           controller: _servingController,
           decoration: InputDecoration(
             labelText: 'Serving Size (${_selectedFood!.servingUnit})',
             suffixText: _selectedFood!.servingUnit,
-            border: const OutlineInputBorder(),
           ),
           keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 20),
-        const Text(
-          'Nutrition Facts:',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        Text('Nutrition Facts:', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
+            _buildNutritionFact(theme, calories.toStringAsFixed(0), 'kcal', theme.colorScheme.secondary),
+            _buildNutritionFact(theme, protein.toStringAsFixed(1), 'g protein', theme.colorScheme.primary),
             _buildNutritionFact(
-              calories.toStringAsFixed(0),
-              'kcal',
-              Colors.orange,
-            ),
-            _buildNutritionFact(
-              protein.toStringAsFixed(1),
-              'g protein',
-              Colors.blue,
-            ),
-            _buildNutritionFact(
+              theme,
               carbs.toStringAsFixed(1),
               'g carbs',
-              Colors.green,
+              theme.colorScheme.tertiaryContainer.withOpacity(.90),
             ),
-            _buildNutritionFact(fat.toStringAsFixed(1), 'g fat', Colors.red),
+            _buildNutritionFact(theme, fat.toStringAsFixed(1), 'g fat', theme.colorScheme.error),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildNutritionFact(String value, String label, Color color) {
+  Widget _buildNutritionFact(ThemeData theme, String value, String label, Color color) {
     return Column(
       children: [
         Text(
           value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
         ),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(.6))),
       ],
+    );
+  }
+}
+
+/* ---------- Small empty-state helper aligned with theme ---------- */
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final String? actionLabel;
+  final String? actionOutlinedLabel;
+  final VoidCallback? onAction;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.actionLabel,
+    this.actionOutlinedLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 64, color: theme.colorScheme.onSurface.withOpacity(.35)),
+          const SizedBox(height: 16),
+          Text(title, style: theme.textTheme.bodyLarge),
+          if (subtitle != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(subtitle!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(.6))),
+            ),
+          const SizedBox(height: 16),
+          if (actionLabel != null)
+            TextButton(onPressed: onAction, child: Text(actionLabel!))
+          else if (actionOutlinedLabel != null)
+            OutlinedButton(onPressed: onAction, child: Text(actionOutlinedLabel!)),
+        ],
+      ),
     );
   }
 }
