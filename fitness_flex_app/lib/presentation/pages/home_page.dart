@@ -137,7 +137,7 @@ class _HomePageState extends State<HomePage> {
               SliverToBoxAdapter(
                 child: _HeroHeader(
                   name: name,
-                  avatarUrl: _userData?['photoUrl'],
+                  avatarUrl: _userData?['photoURL'],
                   onProfile: () => Navigator.of(context)
                       .push(MaterialPageRoute(builder: (_) => const ProfilePage())),
                 ),
