@@ -43,7 +43,10 @@ class _HomePageState extends State<HomePage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final doc = await FirebaseFirestore.instance.collection("users").doc(user.uid).get();
+        final doc = await FirebaseFirestore.instance
+            .collection("users")
+            .doc(user.uid)
+            .get();
         if (!mounted) return;
         setState(() {
           _userData = doc.data() ?? {};
@@ -82,6 +85,15 @@ class _HomePageState extends State<HomePage> {
         Navigator.pushNamed(context, AppRouter.profile);
         break;
     }
+  }
+
+  // ---- helper to read values with alternate keys ----
+  double _read(Map<String, double> m, List<String> keys) {
+    for (final k in keys) {
+      final v = m[k];
+      if (v != null) return v.toDouble();
+    }
+    return 0.0;
   }
 
   @override
@@ -145,18 +157,25 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(color: Colors.redAccent),
                         );
                       }
+
                       final today = snapshot.data![0] as Map<String, double>;
                       final goal = snapshot.data![1] as NutritionGoal;
 
-                      final double cals = (today['calories'] ?? 0).toDouble();
-                      final double protein = (today['protein'] ?? 0).toDouble();
-                      final double carbs = (today['carbs'] ?? 0).toDouble();
-                      final double fats = (today['fats'] ?? 0).toDouble();
+                      // Robust reads (works with 'calories/kcal/energy' and 'fat/fats')
+                      final double cals    = (today['calories'] ?? 0).toDouble();
+                      final double protein = (today['protein']  ?? 0).toDouble();
+                      final double carbs   = (today['carbs']    ?? 0).toDouble();
+                      final double fats     = (today['fats']      ?? 0).toDouble();
+                      // quick visibility while testing
+                      assert(() {
+                        debugPrint('HOME today=$today '
+                            '-> cals=$cals p=$protein c=$carbs f=$fats '
+                            'goal(cal=${goal.calories}, p=${goal.protein}, c=${goal.carbs}, f=${goal.fats})');
+                        return true;
+                      }());
 
-                      final double calGoal = goal.calories;
-                      final double pct =
-                          calGoal > 0 ? (cals / calGoal).clamp(0.0, 1.0).toDouble() : 0.0;
-
+                      final double calGoal = goal.dailyCalories; // mirrors NutritionPage
+                      final double pct = calGoal > 0 ? (cals / calGoal).clamp(0.0, 1.0).toDouble() : 0.0;
                       return Column(
                         children: [
                           _CaloriesRing(
@@ -171,7 +190,7 @@ class _HomePageState extends State<HomePage> {
                                 child: _MacroCard(
                                   label: 'Protein',
                                   value: protein,
-                                  goal: goal.protein,
+                                  goal: goal.dailyProtein,
                                   color: Colors.blue,
                                 ),
                               ),
@@ -180,7 +199,7 @@ class _HomePageState extends State<HomePage> {
                                 child: _MacroCard(
                                   label: 'Carbs',
                                   value: carbs,
-                                  goal: goal.carbs,
+                                  goal: goal.dailyCarbs,
                                   color: Colors.orange,
                                 ),
                               ),
@@ -189,7 +208,7 @@ class _HomePageState extends State<HomePage> {
                                 child: _MacroCard(
                                   label: 'Fats',
                                   value: fats,
-                                  goal: goal.fats,
+                                  goal: goal.dailyFat, 
                                   color: Colors.pink,
                                 ),
                               ),
@@ -201,8 +220,6 @@ class _HomePageState extends State<HomePage> {
                           _FormCheckShortcutCard(
                             onOpen: () =>
                                 Navigator.pushNamed(context, AppRouter.formCheckMenu),
-                            // Or jump straight in:
-                            // onOpen: () => Navigator.pushNamed(context, AppRouter.formCheck),
                           ),
                         ],
                       );
@@ -410,9 +427,13 @@ class _CaloriesRing extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Daily Calories',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700, color: Colors.black)),
+                Text(
+                  'Daily Calories',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700, color: Colors.black),
+                ),
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
                   value: percent,
