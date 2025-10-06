@@ -29,36 +29,14 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
 
   // Curated chip sets (tweak to taste)
   static const _bodyParts = [
-    'chest',
-    'back',
-    'shoulders',
-    'upper arms',
-    'lower arms',
-    'upper legs',
-    'quadriceps',
-    'hamstrings',
-    'lower legs',
-    'waist',
+    'chest','back','shoulders','upper arms','lower arms','upper legs',
+    'quadriceps','hamstrings','lower legs','waist',
   ];
   static const _equipments = [
-    'barbell',
-    'dumbbell',
-    'kettlebell',
-    'cable',
-    'body weight',
-    'smith machine',
+    'barbell','dumbbell','kettlebell','cable','body weight','smith machine',
   ];
   static const _muscles = [
-    'biceps',
-    'triceps',
-    'lats',
-    'glutes',
-    'abs',
-    'calves',
-    'quads',
-    'hamstrings',
-    'delts',
-    'pecs',
+    'biceps','triceps','lats','glutes','abs','calves','quads','hamstrings','delts','pecs',
   ];
 
   @override
@@ -78,6 +56,7 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
   void _onChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), _runSearch);
+    setState(() {}); // refresh clear icon visibility
   }
 
   Future<void> _runSearch() async {
@@ -134,14 +113,11 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
       }
     }
 
-    // These are safe in your model:
     add(e.bodyPart);
     add(e.equipment);
 
-    // If your model later adds a muscle field (e.g. `muscle` or `primaryMuscle`),
-    // you can include it safely like this:
+    // Optional future field:
     // try { add((e as dynamic).muscle as String?); } catch (_) {}
-    // or map it properly in your Exercise model and call add(e.muscle);
 
     return parts.join(' • ');
   }
@@ -149,20 +125,19 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
   String _titleCase(String s) {
     return s
         .split(RegExp(r'\s+'))
-        .map(
-          (w) => w.isEmpty
-              ? w
-              : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}',
-        )
+        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
         .join(' ');
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final canPlay = _results.isNotEmpty;
 
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
+        elevation: 0,
         titleSpacing: 0,
         title: Padding(
           padding: const EdgeInsets.only(right: 8),
@@ -178,21 +153,26 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
               suffixIcon: _controller.text.isEmpty
                   ? null
                   : IconButton(
-                      icon: const Icon(Icons.clear),
+                      tooltip: 'Clear',
+                      icon: const Icon(Icons.close),
                       onPressed: () {
                         _controller.clear();
                         _onChanged('');
                       },
                     ),
+              isDense: true,
+              filled: true,
+              fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.35),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
               ),
-              filled: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
         ),
       ),
+
       body: Column(
         children: [
           _FiltersBar(
@@ -203,25 +183,13 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
             selectedEquipment: _selectedEquipment,
             selectedMuscle: _selectedMuscle,
             onTapBodyPart: (v) => setState(
-              () => _toggleChip<String>(
-                v,
-                _selectedBodyPart,
-                (x) => _selectedBodyPart = x,
-              ),
+              () => _toggleChip<String>(v, _selectedBodyPart, (x) => _selectedBodyPart = x),
             ),
             onTapEquipment: (v) => setState(
-              () => _toggleChip<String>(
-                v,
-                _selectedEquipment,
-                (x) => _selectedEquipment = x,
-              ),
+              () => _toggleChip<String>(v, _selectedEquipment, (x) => _selectedEquipment = x),
             ),
             onTapMuscle: (v) => setState(
-              () => _toggleChip<String>(
-                v,
-                _selectedMuscle,
-                (x) => _selectedMuscle = x,
-              ),
+              () => _toggleChip<String>(v, _selectedMuscle, (x) => _selectedMuscle = x),
             ),
             onClearAll: () {
               setState(() {
@@ -232,10 +200,11 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
               _runSearch();
             },
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: theme.colorScheme.outlineVariant.withOpacity(0.35)),
           Expanded(child: _buildResults(context)),
         ],
       ),
+
       floatingActionButton: canPlay
           ? FloatingActionButton.extended(
               icon: const Icon(Icons.play_arrow),
@@ -255,8 +224,10 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        WorkoutPlayerPage(workout: w, initialExerciseIndex: 0),
+                    builder: (_) => WorkoutPlayerPage(
+                      workout: w,
+                      initialExerciseIndex: 0,
+                    ),
                   ),
                 );
               },
@@ -266,6 +237,8 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
   }
 
   Widget _buildResults(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -273,10 +246,7 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Text(
-            'Error: $_error',
-            style: const TextStyle(color: Colors.red),
-          ),
+          child: Text('Error: $_error', style: const TextStyle(color: Colors.red)),
         ),
       );
     }
@@ -299,72 +269,82 @@ class _WorkoutSearchPageState extends State<WorkoutSearchPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, i) {
         final e = _results[i];
-        return Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.35)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: _isUrl(e.gifUrl)
-                  ? Image.network(
-                      e.gifUrl,
-                      width: 54,
-                      height: 54,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: 54,
-                      height: 54,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.1),
-                      child: const Icon(Icons.image_outlined),
-                    ),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: _isUrl(e.gifUrl)
+                    ? Center(
+                        child: Image.network(
+                          e.gifUrl,
+                          fit: BoxFit.contain, // show whole GIF (no crop)
+                          gaplessPlayback: true,
+                          errorBuilder: (_, __, ___) => _thumbFallback(context),
+                        ),
+                      )
+                    : _thumbFallback(context),
+              ),
             ),
-            title: Text(e.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Text(
+              _titleCase(e.name),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             subtitle: Text(
-              _tags(e), // ✅ safe & pretty
+              _tags(e),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             trailing: IconButton(
+              tooltip: 'Play single exercise',
               icon: const Icon(Icons.play_circle_fill),
               onPressed: () {
-                final w = widget.repo.buildInstantWorkout(
-                  title: e.name,
-                  items: [e],
-                );
+                final w = widget.repo.buildInstantWorkout(title: e.name, items: [e]);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        WorkoutPlayerPage(workout: w, initialExerciseIndex: 0),
+                    builder: (_) => WorkoutPlayerPage(workout: w, initialExerciseIndex: 0),
                   ),
                 );
               },
-              tooltip: 'Play single exercise',
             ),
             onTap: () {
-              final w = widget.repo.buildInstantWorkout(
-                title: e.name,
-                items: [e],
-              );
+              final w = widget.repo.buildInstantWorkout(title: e.name, items: [e]);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      WorkoutPlayerPage(workout: w, initialExerciseIndex: 0),
+                  builder: (_) => WorkoutPlayerPage(workout: w, initialExerciseIndex: 0),
                 ),
               );
             },
           ),
         );
       },
+    );
+  }
+
+  Widget _thumbFallback(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      color: theme.colorScheme.surfaceVariant.withOpacity(0.35),
+      child: Icon(Icons.image_outlined, color: theme.colorScheme.onSurface.withOpacity(0.6)),
     );
   }
 }
@@ -400,6 +380,8 @@ class _FiltersBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     Widget wrapChips(
       List<String> items,
       String? selected,
@@ -411,20 +393,27 @@ class _FiltersBar extends StatelessWidget {
         children: [
           for (final s in items)
             ChoiceChip(
-              label: Text(s),
+              label: Text(_titleCase(s)),
               selected: selected == s,
+              selectedColor: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.surfaceVariant.withOpacity(0.35),
+              labelStyle: TextStyle(
+                color: selected == s ? Colors.white : theme.colorScheme.onSurface,
+              ),
+              shape: const StadiumBorder(),
               onSelected: (_) => onTap(s),
             ),
         ],
       );
     }
 
-    final labelStyle = Theme.of(
-      context,
-    ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold);
+    final labelStyle = Theme.of(context)
+        .textTheme
+        .labelLarge
+        ?.copyWith(fontWeight: FontWeight.bold);
 
     return Material(
-      color: Theme.of(context).colorScheme.surface,
+      color: theme.colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
         child: Column(
@@ -432,10 +421,7 @@ class _FiltersBar extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Text(
-                  'Filters',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                const Text('Filters', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 TextButton.icon(
                   onPressed: onClearAll,
@@ -460,5 +446,12 @@ class _FiltersBar extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _titleCase(String s) {
+    return s
+        .split(RegExp(r'\s+'))
+        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
+        .join(' ');
   }
 }
