@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async'; // <— Added for Timer
 import 'package:fitness_flex_app/data/models/workout_model.dart';
 import 'package:fitness_flex_app/data/repositories/workout_repository.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_detail_page.dart';
@@ -24,6 +25,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
   late Future<List<WorkoutLog>> _todayLogsFuture;
   int _selectedIndex = 1;
   final Set<String> _favoriteWorkoutTitles = {};
+  final TextEditingController _searchController = TextEditingController(); // <— added
 
   @override
   void initState() {
@@ -57,6 +59,12 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
         Navigator.pushReplacementNamed(context, AppRouter.progress);
         break;
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -116,18 +124,19 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SectionCard(
-                  title: 'Work out done today',
-                  child: _buildTodayDoneSection(),
-                ),
-                const SizedBox(height: 18),
+                const _WorkoutHeroSlider(),
+                const SizedBox(height: 16),
+                _buildSearchBar(),
+                const SizedBox(height: 22),
 
+                // Categories
                 _SectionCard(
                   title: 'Categories',
                   child: _buildCategoriesSection(),
                 ),
                 const SizedBox(height: 18),
 
+                // Popular
                 _SectionCard(
                   title: 'Popular Workouts',
                   child: _buildPopularWorkoutsSection(),
@@ -137,6 +146,13 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
                 const Text('All Workouts', style: sectionTitleStyle),
                 const SizedBox(height: 10),
                 _buildAllWorkoutsSection(),
+                const SizedBox(height: 26),
+
+                // Moved to bottom
+                _SectionCard(
+                  title: 'Work out done today',
+                  child: _buildTodayDoneSection(),
+                ),
               ],
             ),
           ),
@@ -234,13 +250,25 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
     );
   }
 
+  // Helper to map category name -> image asset
+  String _categoryImage(String name) {
+    final n = name.toLowerCase().trim();
+    if (n.contains('strength')) return 'assets/images/strength.jpg';
+    if (n.contains('cardio')) return 'assets/images/cardio.jpg';
+    if (n.contains('yoga')) return 'assets/images/yoga.jpg';
+    if (n.contains('flex')) return 'assets/images/yoga.jpg';
+    if (n == 'hit' || n == 'hiit' || n.contains('hit')) return 'assets/images/HIT.jpg';
+    if (n.contains('costume') || n.contains('custom')) return 'assets/images/costume.jpg';
+    return 'assets/images/strength.jpg';
+  }
+
   Widget _buildCategoriesSection() {
     return FutureBuilder<List<WorkoutCategory>>(
       future: _categoriesFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
-            height: 112,
+            height: 180,
             child: Center(child: CircularProgressIndicator()),
           );
         }
@@ -250,33 +278,45 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
             style: const TextStyle(color: Colors.red),
           );
         }
+        final categories = snapshot.data ?? [];
+        if (categories.isEmpty) {
+          return Text(
+            'No categories found.',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          );
+        }
 
-        final categories = snapshot.data!;
-        return SizedBox(
-          height: 112,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final c = categories[index];
-              return _CategoryCard(
-                emoji: c.emoji,
-                label: c.name,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => WorkoutCategoryPage(
-                        workoutRepository: _workoutRepository,
-                        category: c,
+        // Pre-cache images
+        for (final c in categories) {
+          precacheImage(AssetImage(_categoryImage(c.name)), context);
+        }
+
+        // 5 x 1 (five rows, one per full-width card)
+        return Column(
+          children: [
+            for (final c in categories)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: _WideCategoryCard(
+                  label: c.name,
+                  imagePath: _categoryImage(c.name),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WorkoutCategoryPage(
+                          workoutRepository: _workoutRepository,
+                          category: c,
+                        ),
                       ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+                    );
+                  },
+                ),
+              ),
+          ],
         );
       },
     );
@@ -650,6 +690,76 @@ Widget _buildPopularWorkoutsSection() {
       (c.blue * f).round(),
     );
   }
+
+  Widget _buildSearchBar() {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Hero(
+      tag: 'workoutSearchBar',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => WorkoutSearchPage(repo: _workoutRepository),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white.withOpacity(.92),
+              border: Border.all(color: Colors.black.withOpacity(.05)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(.05),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search, color: primary.withOpacity(.85)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Search workouts, categories...',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: .2,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: primary.withOpacity(.10),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    'Search',
+                    style: TextStyle(
+                      color: primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      letterSpacing: .5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /* ---------- Reusable Section Card (matches Nutrition look) ---------- */
@@ -689,54 +799,406 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _CategoryCard extends StatelessWidget {
+class _CategoryCard extends StatefulWidget {
   const _CategoryCard({
-    required this.emoji,
     required this.label,
+    required this.imagePath,
     required this.onTap,
   });
 
-  final String emoji;
   final String label;
+  final String imagePath;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+  State<_CategoryCard> createState() => _CategoryCardState();
+}
 
+class _CategoryCardState extends State<_CategoryCard>
+    with SingleTickerProviderStateMixin {
+  double _scale = 1;
+
+  Color _accent(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('strength')) return Colors.redAccent;
+    if (n.contains('cardio')) return Colors.orange;
+    if (n.contains('yoga') || n.contains('flex')) return Colors.teal;
+    if (n.contains('hit') || n.contains('hiit')) return Colors.purple;
+    if (n.contains('custom')) return Colors.indigo;
+    return Colors.blueGrey;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _accent(widget.label);
+    return Listener(
+      onPointerDown: (_) => setState(() => _scale = .965),
+      onPointerUp:   (_) => setState(() => _scale = 1),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOutCubic,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: widget.onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withOpacity(.22),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    widget.imagePath,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.high,
+                  ),
+                  // Vignette + slight tint toward accent
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.black.withOpacity(.55),
+                          Colors.black.withOpacity(.25),
+                          Colors.black.withOpacity(.55),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Centered text only
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        widget.label,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18,
+                          letterSpacing: .6,
+                          height: 1.15,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(.55),
+                              blurRadius: 12,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Accent border
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: accent.withOpacity(.45),
+                          width: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WideCategoryCard extends StatelessWidget {
+  const _WideCategoryCard({
+    required this.label,
+    required this.imagePath,
+    required this.onTap,
+  });
+
+  final String label;
+  final String imagePath;
+  final VoidCallback onTap;
+
+  Color _accent(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('strength')) return Colors.redAccent;
+    if (n.contains('cardio')) return Colors.orange;
+    if (n.contains('yoga') || n.contains('flex')) return Colors.teal;
+    if (n.contains('hit') || n.contains('hiit')) return Colors.purple;
+    if (n.contains('custom')) return Colors.indigo;
+    return Colors.blueGrey;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = _accent(label);
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(28),
       onTap: onTap,
       child: Container(
-        width: 128,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        height: 130, // Taller than grid version
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.black.withOpacity(.05)),
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(.04),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
+              color: accent.withOpacity(.20),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                imagePath,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+              ),
+              // Wide soft gradient
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.black.withOpacity(.60),
+                      Colors.black.withOpacity(.25),
+                      Colors.black.withOpacity(.60),
+                    ],
+                  ),
+                ),
+              ),
+              // Centered larger text
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 24, // Bigger
+                        letterSpacing: .8,
+                        height: 1.1,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withOpacity(.55),
+                            blurRadius: 14,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Accent outline
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: accent.withOpacity(.45),
+                      width: 1.3,
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* ---------- Workout Hero Slider ---------- */
+class _WorkoutHeroSlider extends StatefulWidget {
+  const _WorkoutHeroSlider();
+  @override
+  State<_WorkoutHeroSlider> createState() => _WorkoutHeroSliderState();
+}
+
+class _WorkoutHeroSliderState extends State<_WorkoutHeroSlider> {
+  final _controller = PageController();
+  int _index = 0;
+  Timer? _timer;
+
+  static const _autoPlayInterval = Duration(seconds: 4);
+  static const _animDuration = Duration(milliseconds: 650);
+
+  final _slides = const [
+    ('assets/images/workout.jpg', 'Train with intent.'),
+    ('assets/images/workout2.jpg', 'Small reps. Big progress.'),
+    ('assets/images/workout3.jpg', 'Stronger every session.'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Start after first frame to avoid jank during initial layout.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleNextTick());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Precache all images to eliminate white flash while decoding.
+    for (final (path, _) in _slides) {
+      precacheImage(AssetImage(path), context);
+    }
+  }
+
+  void _scheduleNextTick() {
+    _timer?.cancel();
+    _timer = Timer(_autoPlayInterval, _goNext);
+  }
+
+  void _goNext() {
+    if (!mounted) return;
+    final next = (_index + 1) % _slides.length;
+    _controller
+        .animateToPage(
+          next,
+          duration: _animDuration,
+          curve: Curves.easeInOutCubic,
+        )
+        .whenComplete(() {
+      if (mounted) _scheduleNextTick();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(26);
+    return SizedBox(
+      height: 190,
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 30)),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: primary,
-                height: 1.1,
+            // Black base to avoid white flashes
+            const Positioned.fill(child: ColoredBox(color: Colors.black)),
+            PageView.builder(
+              controller: _controller,
+              allowImplicitScrolling: true, // prebuild neighbors
+              onPageChanged: (i) => setState(() => _index = i),
+              itemCount: _slides.length,
+              itemBuilder: (_, i) {
+                final (path, quote) = _slides[i];
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // gaplessPlayback keeps previous frame while next decodes
+                    Image.asset(
+                      path,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      filterQuality: FilterQuality.high,
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(.55),
+                            Colors.black.withOpacity(.25),
+                            Colors.black.withOpacity(.55),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 450),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, anim) => FadeTransition(
+                            opacity: anim,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0, .15),
+                                end: Offset.zero,
+                              ).animate(anim),
+                              child: child,
+                            ),
+                          ),
+                          child: Text(
+                            quote,
+                            key: ValueKey(quote),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'cursive',
+                              color: Colors.white,
+                              height: 1.2,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withOpacity(.55),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            Positioned(
+              bottom: 12,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_slides.length, (i) {
+                  final active = i == _index;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 320),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    height: 8,
+                    width: active ? 26 : 10,
+                    decoration: BoxDecoration(
+                      color: active
+                          ? Colors.white
+                          : Colors.white.withOpacity(.45),
+                      borderRadius: BorderRadius.circular(40),
+                    ),
+                  );
+                }),
               ),
             ),
           ],
