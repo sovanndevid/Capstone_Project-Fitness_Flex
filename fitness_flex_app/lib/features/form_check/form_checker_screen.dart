@@ -1,11 +1,18 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+
 import 'package:fitness_flex_app/navigation/app_router.dart';
-import 'package:fitness_flex_app/features/validater_core.dart';
+
+// Analyzer stack
+import 'package:fitness_flex_app/formcheck/config.dart';
+import 'package:fitness_flex_app/formcheck/analyzer.dart';
+import 'package:fitness_flex_app/formcheck/storage.dart';
+// import 'package:share_plus/share_plus.dart'; // optional
 
 class FormCheckerScreen extends StatefulWidget {
   const FormCheckerScreen({super.key});
@@ -16,21 +23,19 @@ class FormCheckerScreen extends StatefulWidget {
 
 class _FormCheckerScreenState extends State<FormCheckerScreen> {
   CameraController? _cam;
-  late PoseDetector _poseDetector;
-  final _validator = ValidatorCore(); // ✅ our offline validatorR
-  // nav/context
+  late final PoseDetector _pose;
+  late final FormAnalyzer _an;
+
   String _exerciseName = 'Exercise';
 
-  // live state
   bool _busy = false;
   int _reps = 0;
   String _cue = '';
   bool _good = false;
-  String _fsm = 'top'; // top -> down -> top (rep)
+  String _fsm = 'top'; // top -> down -> top
 
-  // smoothing store
   final Map<String, Offset> _smoothed = {};
-  Offset _smooth(String key, double x, double y, {double alpha = 0.5}) {
+  Offset _smooth(String key, double x, double y, {double alpha = 0.45}) {
     final prev = _smoothed[key] ?? Offset(x, y);
     final cur = Offset(
       alpha * x + (1 - alpha) * prev.dx,
@@ -40,7 +45,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     return cur;
   }
 
-  // summary stats
   int _goodFrames = 0;
   int _totalFrames = 0;
   final Map<String, int> _cueCounts = {
@@ -48,12 +52,24 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     'Go deeper (hip below knee)': 0,
     'Control knees over toes': 0,
   };
-  final List<String> _timeline = []; // 'G' or 'B' per scored frame
+  final List<String> _timeline = [];
+
+  int _fidx = -1;
+  static const double _assumedFps = 30.0;
 
   @override
   void initState() {
     super.initState();
-    _poseDetector = PoseDetector(options: PoseDetectorOptions());
+
+    _an = FormAnalyzer(cfg: FCConfig.defaultSquat(), fps: _assumedFps);
+
+    _pose = PoseDetector(
+      options: PoseDetectorOptions(
+        mode: PoseDetectionMode.stream,
+        model: PoseDetectionModel.base,
+      ),
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args =
           (ModalRoute.of(context)?.settings.arguments ?? {}) as Map<dynamic, dynamic>;
@@ -61,6 +77,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         _exerciseName = (args['exercise'] ?? 'Exercise') as String;
       });
     });
+
     _initCamera();
   }
 
@@ -76,7 +93,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         }
       } catch (_) {}
       try {
-        await _poseDetector.close();
+        await _pose.close();
       } catch (_) {}
     }();
     super.dispose();
@@ -112,7 +129,6 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     }
   }
 
-  // throttle frames (every 3rd) for stability
   int _skip = 0;
   Future<void> _onImage(CameraImage img) async {
     if ((_skip++ % 3) != 0) return;
@@ -150,7 +166,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
           ) ??
           InputImageRotation.rotation0deg;
 
-      final inputImage = InputImage.fromBytes(
+      final input = InputImage.fromBytes(
         bytes: plane.bytes,
         metadata: InputImageMetadata(
           size: Size(img.width.toDouble(), img.height.toDouble()),
@@ -160,13 +176,23 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         ),
       );
 
-      final poses = await _poseDetector.processImage(inputImage);
+      final poses = await _pose.processImage(input);
       if (poses.isEmpty) {
         _busy = false;
         return;
       }
 
-      final lm = poses.first.landmarks;
+      // Feed analyzer
+      _fidx++;
+      final pose = poses.first;
+      _an.addFrame(
+        fidx: _fidx,
+        tMs: _fidx * (1000.0 / _assumedFps),
+        pose: pose,
+      );
+
+      // Live cues (left side quick heuristic)
+      final lm = pose.landmarks;
       final S = lm[PoseLandmarkType.leftShoulder];
       final Hh = lm[PoseLandmarkType.leftHip];
       final K = lm[PoseLandmarkType.leftKnee];
@@ -181,19 +207,18 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       double nx(double v) => v / W;
       double ny(double v) => v / Ht;
 
-      final s = _smooth('s', nx(S.x), ny(S.y), alpha: 0.45);
-      final h = _smooth('h', nx(Hh.x), ny(Hh.y), alpha: 0.45);
-      final k = _smooth('k', nx(K.x), ny(K.y), alpha: 0.45);
-      final a = _smooth('a', nx(A.x), ny(A.y), alpha: 0.45);
-      final t = _smooth('t', nx(T.x), ny(T.y), alpha: 0.45);
+      final s = _smooth('s', nx(S.x), ny(S.y));
+      final h = _smooth('h', nx(Hh.x), ny(Hh.y));
+      final k = _smooth('k', nx(K.x), ny(K.y));
+      final a = _smooth('a', nx(A.x), ny(A.y));
+      final t = _smooth('t', nx(T.x), ny(T.y));
 
-      // posture checks
-      final backAng = _angle(s, h, a); // shoulder-hip-ankle
+      final backAng = _angle(s, h, a);
       final depth = (h.dy - k.dy);
       final shinLen = (k - a).distance.clamp(1e-6, 1.0);
       final kneeOverToe = (k.dx - t.dx) > 0.25 * shinLen;
 
-      final backOk = backAng >= ValidatorCore.kneeStandingDeg;
+      final backOk = backAng >= 155;
       final depthOk = depth > 0.015;
       final kneeOk = !kneeOverToe;
       final good = backOk && depthOk && kneeOk;
@@ -240,7 +265,8 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       final isFront =
           _cam!.description.lensDirection == CameraLensDirection.front;
       final next = cams.firstWhere(
-        (c) => c.lensDirection ==
+        (c) =>
+            c.lensDirection ==
             (isFront ? CameraLensDirection.back : CameraLensDirection.front),
         orElse: () => cams.first,
       );
@@ -263,23 +289,24 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
 
   Future<void> _endSession() async {
     try {
-      if (_cam != null && _cam!.value.isStreamingImages) {
+      if (_cam?.value.isStreamingImages == true) {
         await _cam!.stopImageStream();
       }
     } catch (_) {}
 
-    final metrics = {
-      'depth': _validator.scoreDepth(110),
-      'torso': _validator.scoreTorso(20),
-      'valgus': _validator.scoreValgus(10, true),
-      'symmetry': _validator.scoreSymmetry(8, false),
-      'tempo': _validator.scoreTempo(1500, 1000),
-      'stability': _validator.scoreStability(0.02, 0.05),
-      'rom': _validator.scoreRom(45),
-    };
-    final overall = _validator.overallScore(metrics);
+    final session = _an.buildSessionJson(videoName: "live_camera");
+
+    final file =
+        await FCStorage.writeSessionJson(session, filename: "squat_validation.json");
 
     if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Exported JSON: ${file.path}')),
+    );
+
+    // Optionally share:
+    // await Share.shareXFiles([XFile(file.path)], text: 'Form session JSON');
+
     Navigator.pushNamed(
       context,
       AppRouter.formCheckSummary,
@@ -288,14 +315,18 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         'reps': _reps,
         'goodFrames': _goodFrames,
         'scoredFrames': _totalFrames,
-        'overallScore': overall,
-        'components': metrics,
+        'overallScore': session['overall_score_mean'],
+        'components': session['reps'] is List && (session['reps'] as List).isNotEmpty
+            ? (session['reps'] as List).last['score_components']
+            : {},
         'fails': {
           'back': _cueCounts['Keep chest up / back straighter'] ?? 0,
           'depth': _cueCounts['Go deeper (hip below knee)'] ?? 0,
           'knee': _cueCounts['Control knees over toes'] ?? 0,
         },
         'timeline': _timeline.take(200).toList(),
+        'jsonPath': file.path,
+        'sessionJson': session,
       },
     );
   }
@@ -305,16 +336,28 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     final ready = _cam != null && _cam!.value.isInitialized;
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text('$_exerciseName'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share),
+            onPressed: _endSession,
+            tooltip: 'End & Export',
+          )
+        ],
+      ),
       body: !ready
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
                 CameraPreview(_cam!),
+
                 Positioned(
                   left: 16,
-                  top: 48,
+                  top: 16,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(12),
@@ -329,15 +372,17 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                     ),
                   ),
                 ),
+
                 Positioned(
                   right: 8,
-                  top: 44,
+                  top: 12,
                   child: IconButton(
                     onPressed: _switchCamera,
                     icon: const Icon(Icons.cameraswitch, color: Colors.white),
                     tooltip: 'Switch camera',
                   ),
                 ),
+
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
@@ -346,13 +391,14 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.92),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(24)),
                       boxShadow: const [
                         BoxShadow(
                           blurRadius: 16,
                           color: Colors.black26,
                           offset: Offset(0, -4),
-                        ),
+                        )
                       ],
                     ),
                     child: Column(
@@ -368,7 +414,8 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
-                                color: _good ? Colors.green[700] : Colors.red[700],
+                                color:
+                                    _good ? Colors.green[700] : Colors.red[700],
                                 height: 1.2,
                               ),
                             ),
@@ -381,7 +428,9 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                             Row(
                               children: [
                                 Icon(
-                                  _good ? Icons.check_circle : Icons.error_rounded,
+                                  _good
+                                      ? Icons.check_circle
+                                      : Icons.error_rounded,
                                   color: _good ? Colors.green : Colors.red,
                                   size: 18,
                                 ),
@@ -390,7 +439,9 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                                   _good ? 'Good form' : 'Needs adjustment',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: _good ? Colors.green[800] : Colors.red[800],
+                                    color: _good
+                                        ? Colors.green[800]
+                                        : Colors.red[800],
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -400,9 +451,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                             Text(
                               'Reps: $_reps',
                               style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
+                                  fontSize: 14, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
