@@ -1,4 +1,3 @@
-// lib/formcheck/analyzer.dart
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
@@ -74,6 +73,9 @@ class FormAnalyzer {
   final FCConfig cfg;
   final double fps;
 
+  // 🔔 optional callback when a rep is detected
+  final void Function(RepSummary rep)? onRep;
+
   final List<FrameFeatures> _frames = [];
   int _repCount = 0;
   final List<RepSummary> _reps = [];
@@ -84,17 +86,19 @@ class FormAnalyzer {
   double? _stanceScale;
   double? _stanceValgusRatio;
 
-FormAnalyzer({required this.cfg, required this.fps}) {
-  _seg = RepSegmenter(
-    minSec: cfg.minRepSec,
-    maxSec: cfg.maxRepSec,
-    standDeg: (cfg.thresholds["knee_standing_deg"] as num).toDouble(),
-    bottomDeg: (cfg.thresholds["knee_bottom_deg"] as num).toDouble(),
-  );
-}
+  FormAnalyzer({
+    required this.cfg,
+    required this.fps,
+    this.onRep,
+  }) {
+    _seg = RepSegmenter(
+      minSec: cfg.minRepSec,
+      maxSec: cfg.maxRepSec,
+      standDeg: (cfg.thresholds["knee_standing_deg"] as num).toDouble(),
+      bottomDeg: (cfg.thresholds["knee_bottom_deg"] as num).toDouble(),
+    );
+  }
 
-
-  // ----- helpers -----
   double _asDouble(Object? v, [double fallback = 0.0]) =>
       (v is num) ? v.toDouble() : fallback;
 
@@ -156,7 +160,7 @@ FormAnalyzer({required this.cfg, required this.fps}) {
     final signZSum =
         (shL.z - shR.z).sign + (knL.z - knR.z).sign + (anL.z - anR.z).sign;
 
-    // ML Kit → likelihood
+    // ML Kit likelihood (newer API field name)
     final visSh = (shL.likelihood + shR.likelihood) * 0.5;
     final visHip = (hipL.likelihood + hipR.likelihood) * 0.5;
     final visK = (knL.likelihood + knR.likelihood) * 0.5;
@@ -203,69 +207,51 @@ FormAnalyzer({required this.cfg, required this.fps}) {
     }
   }
 
-  // ---- view classification (raw)
   (String, double) _classifyView(FrameFeatures f) {
     final xSpan = (f.spanSh + f.spanKn + f.spanAn) / 3.0;
     final zDiff = (f.dzSh + f.dzKn + f.dzAn) / 3.0;
     final ratio = xSpan / (zDiff + 1e-6);
 
     String label;
-    if (ratio >= 1.35) {
-      label = "front";
-    } else if (ratio <= 0.65) {
-      label = "side";
-    } else {
-      label = "oblique";
-    }
+    if (ratio >= 1.35) label = "front";
+    else if (ratio <= 0.65) label = "side";
+    else label = "oblique";
+
     if (label == "side") {
       final s = f.signZSum;
       if (s < -0.5) label = "side_left";
       else if (s > 0.5) label = "side_right";
     }
 
-    final confBase =
-        (ratio <= 1 ? (1 / math.max(ratio, 1e-6)) : ratio); // farther from 1 → higher conf
+    final confBase = (ratio <= 1 ? (1 / math.max(ratio, 1e-6)) : ratio);
     final conf = math.min(1.0, math.log(confBase) / math.log(1.3));
     return (label, conf.isFinite ? conf.abs() : 0.5);
   }
-void _trySegment(FrameFeatures f) {
-  final kneeMin = math.min(f.kneeL, f.kneeR);
-  final evt = _seg.update(
-    fidx: f.fidx,
-    tMs: f.tMs,        // ← pass real milliseconds, not frame math
-    kneeDeg: kneeMin,
-  );
-  if (evt != null) {
-    _repCount += 1;
-    final rep = _buildRep(evt, _repCount);
-    _reps.add(rep);
+
+  void _trySegment(FrameFeatures f) {
+    final kneeMin = math.min(f.kneeL, f.kneeR);
+    final evt = _seg.update(fidx: f.fidx, tMs: f.tMs, kneeDeg: kneeMin);
+    if (evt != null) {
+      _repCount += 1;
+      final rep = _buildRep(evt, _repCount);
+      _reps.add(rep);
+      if (onRep != null) onRep!(rep); // 🔔 notify UI on each rep
+    }
   }
-}
-
-
 
   RepSummary _buildRep(RepEvent evt, int id) {
-    final slice =
-        _frames.where((x) => x.fidx >= evt.start && x.fidx <= evt.end).toList();
+    final slice = _frames.where((x) => x.fidx >= evt.start && x.fidx <= evt.end).toList();
 
     // view majority + conf avg
     final views = <String, int>{};
-    double confSum = 0;
-    int confN = 0;
+    double confSum = 0; int confN = 0;
     for (final fr in slice) {
       final (lab, cf) = _classifyView(fr);
       views[lab] = (views[lab] ?? 0) + 1;
-      confSum += cf;
-      confN += 1;
+      confSum += cf; confN += 1;
     }
-    String top = "unknown";
-    int best = -1;
-    views.forEach((k, v) {
-      if (v > best) {
-        best = v;
-        top = k;
-      }
-    });
+    String top = "unknown"; int best = -1;
+    views.forEach((k, v) { if (v > best) { best = v; top = k; } });
     final viewConf = confN == 0 ? 0.0 : (confSum / confN);
 
     final metrics = _computeMetrics(slice, evt, top);
@@ -288,8 +274,7 @@ void _trySegment(FrameFeatures f) {
     );
   }
 
-  Map<String, dynamic> _computeMetrics(
-      List<FrameFeatures> slice, RepEvent evt, String view) {
+  Map<String, dynamic> _computeMetrics(List<FrameFeatures> slice, RepEvent evt, String view) {
     final kneeMinL = slice.map((e) => e.kneeL).reduce(math.min);
     final kneeMaxL = slice.map((e) => e.kneeL).reduce(math.max);
     final kneeMinR = slice.map((e) => e.kneeR).reduce(math.min);
@@ -299,17 +284,12 @@ void _trySegment(FrameFeatures f) {
     final rom = kneeMax - kneeMin;
 
     // bottom idx by min mean knee
-    double best = 1e9;
-    int bottomIdx = evt.bottom;
+    double best = 1e9; int bottomIdx = evt.bottom;
     for (final fr in slice) {
       final meanK = (fr.kneeL + fr.kneeR) / 2.0;
-      if (meanK < best) {
-        best = meanK;
-        bottomIdx = fr.fidx;
-      }
+      if (meanK < best) { best = meanK; bottomIdx = fr.fidx; }
     }
-    final torsoBottom =
-        _frames.firstWhere((f) => f.fidx == bottomIdx).torsoLean;
+    final torsoBottom = _frames.firstWhere((f) => f.fidx == bottomIdx).torsoLean;
 
     final scale = (_stanceScale ?? 1.0).clamp(1e-6, 1e9);
     final hipYMean = _stanceHipYMean;
@@ -320,13 +300,12 @@ void _trySegment(FrameFeatures f) {
       hipDepthNorm = (hipMaxY - hipYMean) / scale;
     }
 
-// tempo (use timestamps, not index math)
-final startT = _frames.firstWhere((f) => f.fidx == evt.start).tMs;
-final bottomT = _frames.firstWhere((f) => f.fidx == bottomIdx).tMs;
-final endT = _frames.firstWhere((f) => f.fidx == evt.end).tMs;
-
-final eccMs = (bottomT - startT).clamp(1.0, double.infinity);
-final conMs = (endT - bottomT).clamp(1.0, double.infinity);
+    // tempo (timestamps)
+    final startT = _frames.firstWhere((f) => f.fidx == evt.start).tMs;
+    final bottomT = _frames.firstWhere((f) => f.fidx == bottomIdx).tMs;
+    final endT = _frames.firstWhere((f) => f.fidx == evt.end).tMs;
+    final eccMs = (bottomT - startT).clamp(1.0, double.infinity);
+    final conMs = (endT - bottomT).clamp(1.0, double.infinity);
 
     // camera motion
     final ax = _std(slice.map((e) => e.ankle.dx));
@@ -340,10 +319,8 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
 
     // foot drift
     final spans = slice.map((e) => e.spanAn).toList();
-    final mu =
-        spans.isEmpty ? 1e-6 : (spans.reduce((a, b) => a + b) / spans.length);
-    final footDriftNorm =
-        spans.isEmpty ? cameraMotionNorm : (_std(spans) / (mu == 0 ? 1e-6 : mu));
+    final mu = spans.isEmpty ? 1e-6 : (spans.reduce((a, b) => a + b) / spans.length);
+    final footDriftNorm = spans.isEmpty ? cameraMotionNorm : (_std(spans) / (mu == 0 ? 1e-6 : mu));
 
     // symmetry (front only)
     double? symPct;
@@ -352,8 +329,7 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
     } else {
       final romL = kneeMaxL - kneeMinL;
       final romR = kneeMaxR - kneeMinR;
-      symPct =
-          ((romL - romR).abs() / (math.max(romL, math.max(romR, 1e-6)))) * 100.0;
+      symPct = ((romL - romR).abs() / (math.max(romL, math.max(romR, 1e-6)))) * 100.0;
     }
 
     // valgus (front only)
@@ -362,9 +338,7 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
       final fBottom = _frames.firstWhere((f) => f.fidx == bottomIdx);
       final vrb = fBottom.valgusRatio;
       if (vrb != null && _stanceValgusRatio! > 1e-6) {
-        valgusDropPct =
-            math.max(0.0, (_stanceValgusRatio! - vrb) / _stanceValgusRatio!) *
-                100.0;
+        valgusDropPct = math.max(0.0, (_stanceValgusRatio! - vrb) / _stanceValgusRatio!) * 100.0;
       }
     }
 
@@ -391,30 +365,19 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
     };
   }
 
-  Map<String, double> _metricConfidences(
-      List<FrameFeatures> slice, Map<String, dynamic> metrics, String view) {
-    double visMean(List<double> xs) =>
-        xs.isEmpty ? 0.6 : xs.reduce((a, b) => a + b) / xs.length;
+  Map<String, double> _metricConfidences(List<FrameFeatures> slice, Map<String, dynamic> metrics, String view) {
+    double visMean(List<double> xs) => xs.isEmpty ? 0.6 : xs.reduce((a, b) => a + b) / xs.length;
 
-    final depthC =
-        visMean(slice.map((e) => (e.visKnee + e.visHip + e.visAnk) / 3.0).toList());
-    final torsoC =
-        visMean(slice.map((e) => (e.visSh + e.visHip) / 2.0).toList());
-    final tempoC =
-        visMean(slice.map((e) => (e.visKnee + e.visAnk) / 2.0).toList());
-    var stabilityC =
-        visMean(slice.map((e) => (e.visHip + e.visAnk) / 2.0).toList());
+    final depthC = visMean(slice.map((e) => (e.visKnee + e.visHip + e.visAnk) / 3.0).toList());
+    final torsoC = visMean(slice.map((e) => (e.visSh + e.visHip) / 2.0).toList());
+    final tempoC = visMean(slice.map((e) => (e.visKnee + e.visAnk) / 2.0).toList());
+    var stabilityC = visMean(slice.map((e) => (e.visHip + e.visAnk) / 2.0).toList());
     final romC = depthC;
-    var valgusC =
-        visMean(slice.map((e) => (e.visKnee + e.visAnk) / 2.0).toList());
+    var valgusC = visMean(slice.map((e) => (e.visKnee + e.visAnk) / 2.0).toList());
     if (!view.startsWith("front")) valgusC = 0.0;
 
-    // relax if camera moving
-    final cam = _asDouble(metrics["stability"] is Map
-        ? (metrics["stability"] as Map)["camera_motion_norm"]
-        : null);
-    final relaxThr =
-        (cfg.stability["camera_motion_relax_thr"] as num).toDouble();
+    final cam = _asDouble(metrics["stability"] is Map ? (metrics["stability"] as Map)["camera_motion_norm"] : null);
+    final relaxThr = (cfg.stability["camera_motion_relax_thr"] as num).toDouble();
     if (cam >= relaxThr) stabilityC *= 0.3;
 
     return {
@@ -429,13 +392,12 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
   }
 
   (double, Map<String, double>, Map<String, double>, List<String>) _score(
-      Map<String, dynamic> m, Map<String, double> conf, String view) {
+    Map<String, dynamic> m, Map<String, double> conf, String view) {
     final th = cfg.thresholds;
     final baseW = Map<String, double>.from(cfg.scoringWeights);
     final sideW = Map<String, double>.from(cfg.sideViewWeights);
     final w = (view.startsWith("side") ? sideW : baseW);
 
-    // ------ values from metrics (safe typed reads) ------
     final mStab = (m["stability"] as Map?) ?? const {};
     final mTempo = (m["tempo_ms"] as Map?) ?? const {};
 
@@ -451,85 +413,43 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
     final depth = _asDouble(m["knee_angle_min"]);
     final rom = _asDouble(m["rom_knee"]);
 
-    // ------ component scores ------
-    final bottomOk = (depth < 90)
-        ? 10.0
-        : (depth < (th["knee_bottom_deg"] as num).toDouble() ? 8.0 : 6.0);
+    final bottomOk = (depth < 90) ? 10.0 : (depth < (th["knee_bottom_deg"] as num).toDouble() ? 8.0 : 6.0);
 
     final lo = (th["torso_lean_ok_deg"] as List).first.toDouble();
     final hi = (th["torso_lean_ok_deg"] as List).last.toDouble();
-    final torsoS = (tl >= lo && tl <= hi)
-        ? 10.0
-        : ((tl >= 0 && tl < lo + 10) || (tl > hi - 10 && tl <= 60) ? 8.0 : 6.0);
+    final torsoS = (tl >= lo && tl <= hi) ? 10.0 : ((tl >= 0 && tl < lo + 10) || (tl > hi - 10 && tl <= 60) ? 8.0 : 6.0);
 
     double valgusS;
-    if (vd == null) {
-      valgusS = 8.0;
-      w["knee_valgus"] = 0.0;
-    } else {
-      final vdd = vd.toDouble();
-      valgusS = (vdd < 5)
-          ? 10.0
-          : (vdd < (th["valgus_max_drop_pct"] as num).toDouble() ? 8.0 : 6.0);
+    if (vd == null) { valgusS = 8.0; w["knee_valgus"] = 0.0; }
+    else { final vdd = vd.toDouble();
+      valgusS = (vdd < 5) ? 10.0 : (vdd < (th["valgus_max_drop_pct"] as num).toDouble() ? 8.0 : 6.0);
     }
 
     double symS;
-    if (view.startsWith("side") || sym == null) {
-      symS = 8.0;
-      w["symmetry"] = 0.0;
-    } else {
-      final s = sym.toDouble();
-      symS = (s < 5) ? 10.0 : (s < 12 ? 8.0 : 6.0);
-    }
+    if (view.startsWith("side") || sym == null) { symS = 8.0; w["symmetry"] = 0.0; }
+    else { final s = sym.toDouble(); symS = (s < 5) ? 10.0 : (s < 12 ? 8.0 : 6.0); }
 
-    final stableS = (pj < 0.01 && fd < 0.05)
-        ? 10.0
-        : (pj < 0.02 && fd < 0.08)
-            ? 8.0
-            : (pj < 0.05 && fd < 0.12)
-                ? 6.0
-                : 4.0;
+    final stableS = (pj < 0.01 && fd < 0.05) ? 10.0
+                    : (pj < 0.02 && fd < 0.08) ? 8.0
+                    : (pj < 0.05 && fd < 0.12) ? 6.0 : 4.0;
 
-    final tempoS = (ratio >= 1.2 && ratio <= 2.4)
-        ? 10.0
-        : (ratio >= 0.9 && ratio <= 3.0 ? 8.0 : 6.0);
-
+    final tempoS = (ratio >= 1.2 && ratio <= 2.4) ? 10.0 : (ratio >= 0.9 && ratio <= 3.0 ? 8.0 : 6.0);
     final romS = (rom > 50) ? 10.0 : (rom > 35 ? 8.0 : 6.0);
 
-    final comp = <String, double>{
-      "depth": bottomOk,
-      "torso_lean": torsoS,
-      "valgus": valgusS,
-      "symmetry": symS,
-      "tempo": tempoS,
-      "stability": stableS,
-      "rom": romS,
+    final comp = <String,double>{
+      "depth": bottomOk, "torso_lean": torsoS, "valgus": valgusS, "symmetry": symS,
+      "tempo": tempoS, "stability": stableS, "rom": romS,
     };
 
-    // camera-motion relaxer: if camera pans a lot, reduce stability impact
     final cam = _asDouble(mStab["camera_motion_norm"]);
-    final relaxThr =
-        (cfg.stability["camera_motion_relax_thr"] as num).toDouble();
+    final relaxThr = (cfg.stability["camera_motion_relax_thr"] as num).toDouble();
     var stabilityCapsOff = false;
-    if (cam >= relaxThr) {
-      comp["stability"] = math.max(comp["stability"]!, 6.0);
-      stabilityCapsOff = true;
-    }
+    if (cam >= relaxThr) { comp["stability"] = math.max(comp["stability"]!, 6.0); stabilityCapsOff = true; }
 
-    // effective weights (confidence-aware)
-    final eff = <String, double>{};
-    double sum = 0.0;
-    for (final k in w.keys) {
-      final c = conf[k] ?? 1.0;
-      eff[k] = w[k]! * c;
-      sum += eff[k]!;
-    }
-    if (sum == 0) sum = 1.0;
-    for (final k in eff.keys) {
-      eff[k] = eff[k]! / sum;
-    }
+    final eff = <String,double>{}; double sum = 0.0;
+    for (final k in w.keys) { final c = conf[k] ?? 1.0; eff[k] = w[k]! * c; sum += eff[k]!; }
+    if (sum == 0) sum = 1.0; for (final k in eff.keys) { eff[k] = eff[k]! / sum; }
 
-    // weighted mean + bottleneck mix
     double weighted = 0.0;
     weighted += (eff["depth"] ?? 0) * (comp["depth"] ?? 0);
     weighted += (eff["torso_lean"] ?? 0) * (comp["torso_lean"] ?? 0);
@@ -543,7 +463,6 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
     final lam = (cfg.scoring["bottleneck_mix"] as num).toDouble();
     var overall = (1 - lam) * weighted + lam * minComp;
 
-    // --- hard caps (typed) ---
     final caps = Map<String, num>.from(cfg.scoring["hard_caps"]);
     final capScore = (cfg.scoring["cap_score"] as num).toDouble();
 
@@ -553,22 +472,10 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
     final capSym = (caps["symmetry_pct"] ?? 1e9).toDouble();
 
     final faults = <String>[];
-    if (!stabilityCapsOff && pj >= capPelvis) {
-      faults.add("pelvis_jitter_high:${pj.toStringAsFixed(3)}");
-      overall = math.min(overall, capScore);
-    }
-    if (!stabilityCapsOff && fd >= capFoot) {
-      faults.add("foot_drift_high:${fd.toStringAsFixed(3)}");
-      overall = math.min(overall, capScore);
-    }
-    if (tl >= capTorso) {
-      faults.add("torso_lean_high:${tl.toStringAsFixed(1)}");
-      overall = math.min(overall, capScore);
-    }
-    if (sym != null && sym.toDouble() >= capSym) {
-      faults.add("symmetry_high:${sym.toStringAsFixed(1)}%");
-      overall = math.min(overall, capScore);
-    }
+    if (!stabilityCapsOff && pj >= capPelvis) { faults.add("pelvis_jitter_high:${pj.toStringAsFixed(3)}"); overall = math.min(overall, capScore); }
+    if (!stabilityCapsOff && fd >= capFoot) { faults.add("foot_drift_high:${fd.toStringAsFixed(3)}"); overall = math.min(overall, capScore); }
+    if (tl >= capTorso) { faults.add("torso_lean_high:${tl.toStringAsFixed(1)}"); overall = math.min(overall, capScore); }
+    if (sym != null && sym.toDouble() >= capSym) { faults.add("symmetry_high:${sym.toStringAsFixed(1)}%"); overall = math.min(overall, capScore); }
 
     return (double.parse(overall.toStringAsFixed(2)), comp, eff, faults);
   }
@@ -577,39 +484,29 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
     final list = xs.toList();
     if (list.length < 2) return 0.0;
     final mu = list.reduce((a, b) => a + b) / list.length;
-    final v =
-        list.map((x) => (x - mu) * (x - mu)).reduce((a, b) => a + b) / list.length;
+    final v = list.map((x) => (x - mu) * (x - mu)).reduce((a, b) => a + b) / list.length;
     return math.sqrt(v);
   }
 
   double _meanAbsSecondDiff(List<double> xs) {
-    double s = 0.0;
-    int n = 0;
+    double s = 0.0; int n = 0;
     for (int i = 2; i < xs.length; i++) {
       final d2 = (xs[i] - 2 * xs[i - 1] + xs[i - 2]).abs();
-      s += d2;
-      n++;
+      s += d2; n++;
     }
     return n == 0 ? 0.0 : s / n;
   }
 
   List<RepSummary> get reps => List.unmodifiable(_reps);
 
-  // ---------- Build Python-style session JSON ----------
   Map<String, dynamic> buildSessionJson({required String videoName}) {
     final scores = _reps.map((r) => r.score).toList();
-    final mean =
-        scores.isEmpty ? 0.0 : scores.reduce((a, b) => a + b) / scores.length;
-    final stdev = scores.length < 2
-        ? 0.0
-        : () {
-            final mu = mean;
-            final v = scores
-                    .map((s) => (s - mu) * (s - mu))
-                    .reduce((a, b) => a + b) /
-                scores.length;
-            return math.sqrt(v);
-          }();
+    final mean = scores.isEmpty ? 0.0 : scores.reduce((a, b) => a + b) / scores.length;
+    final stdev = scores.length < 2 ? 0.0 : () {
+      final mu = mean;
+      final v = scores.map((s) => (s - mu) * (s - mu)).reduce((a, b) => a + b) / scores.length;
+      return math.sqrt(v);
+    }();
 
     final step = math.max(1, (fps / 2).round()); // ~0.5s
     final labels = <String>[];
@@ -629,33 +526,21 @@ final conMs = (endT - bottomT).clamp(1.0, double.infinity);
         "hip_y_mean": _stanceHipYMean,
         "scale": _stanceScale ?? 1.0,
         "valgus_ratio_stance": _stanceValgusRatio,
-        "camera_motion_relax_thr":
-            (cfg.stability["camera_motion_relax_thr"] as num).toDouble(),
+        "camera_motion_relax_thr": (cfg.stability["camera_motion_relax_thr"] as num).toDouble(),
       },
-      "reps": _reps
-          .map((r) => {
-                "rep_id": r.id,
-                "frames": [r.start, r.end],
-                "bottom_frame": r.bottom,
-                "view": {
-                  "label": r.view,
-                  "confidence": double.parse(r.viewConf.toStringAsFixed(3)),
-                  "mixed_view": false,
-                },
-                "metrics": r.metrics,
-                "metric_confidence": r.confidences
-                    .map((k, v) => MapEntry(k, double.parse(v.toStringAsFixed(3)))),
-                "score": r.score,
-                "score_components": r.compScores,
-                "score_effective_weights": r.effWeights
-                    .map((k, v) => MapEntry(k, double.parse(v.toStringAsFixed(3)))),
-                "faults": r.faults,
-              })
-          .toList(),
-      "view_timeline_sample": {
-        "every_n_frames": step,
-        "labels": labels,
-      }
+      "reps": _reps.map((r) => {
+        "rep_id": r.id,
+        "frames": [r.start, r.end],
+        "bottom_frame": r.bottom,
+        "view": {"label": r.view, "confidence": double.parse(r.viewConf.toStringAsFixed(3)), "mixed_view": false},
+        "metrics": r.metrics,
+        "metric_confidence": r.confidences.map((k, v) => MapEntry(k, double.parse(v.toStringAsFixed(3)))),
+        "score": r.score,
+        "score_components": r.compScores,
+        "score_effective_weights": r.effWeights.map((k, v) => MapEntry(k, double.parse(v.toStringAsFixed(3)))),
+        "faults": r.faults,
+      }).toList(),
+      "view_timeline_sample": {"every_n_frames": step, "labels": labels}
     };
   }
 }

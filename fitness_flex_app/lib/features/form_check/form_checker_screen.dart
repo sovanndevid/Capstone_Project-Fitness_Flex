@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +12,6 @@ import 'package:fitness_flex_app/navigation/app_router.dart';
 import 'package:fitness_flex_app/formcheck/config.dart';
 import 'package:fitness_flex_app/formcheck/analyzer.dart';
 import 'package:fitness_flex_app/formcheck/storage.dart';
-// import 'package:share_plus/share_plus.dart'; // optional
 
 class FormCheckerScreen extends StatefulWidget {
   const FormCheckerScreen({super.key});
@@ -30,18 +28,17 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
   String _exerciseName = 'Exercise';
 
   bool _busy = false;
-  int _reps = 0;
+  int _reps = 0;           // ← comes from analyzer.onRep
   String _cue = '';
   bool _good = false;
-  String _fsm = 'top'; // top -> down -> top
+
+  // live-cue mini FSM (for text only, not counting)
+  String _fsm = 'top';
 
   final Map<String, Offset> _smoothed = {};
   Offset _smooth(String key, double x, double y, {double alpha = 0.45}) {
     final prev = _smoothed[key] ?? Offset(x, y);
-    final cur = Offset(
-      alpha * x + (1 - alpha) * prev.dx,
-      alpha * y + (1 - alpha) * prev.dy,
-    );
+    final cur = Offset(alpha * x + (1 - alpha) * prev.dx, alpha * y + (1 - alpha) * prev.dy);
     _smoothed[key] = cur;
     return cur;
   }
@@ -55,27 +52,17 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
   };
   final List<String> _timeline = [];
 
-  // frame index and real-time clock
+  // frame index + real-time clock (for tempo)
   int _fidx = -1;
   final Stopwatch _sw = Stopwatch();
   bool _swStarted = false;
-
-  // concat planes for Android YUV420
-  Uint8List _concatPlanes(List<Plane> planes) {
-    final b = BytesBuilder();
-    for (final p in planes) {
-      b.add(p.bytes);
-    }
-    return b.toBytes();
-  }
 
   InputImage _buildInputImage(CameraImage img, int sensorOrientation) {
     final rotation = InputImageRotationValue.fromRawValue(sensorOrientation) ??
         InputImageRotation.rotation0deg;
 
     if (Platform.isIOS) {
-      // iOS = BGRA8888 single plane
-      final plane = img.planes.first;
+      final plane = img.planes.first; // BGRA
       return InputImage.fromBytes(
         bytes: plane.bytes,
         metadata: InputImageMetadata(
@@ -86,20 +73,17 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         ),
       );
     } else {
-// ANDROID: simplest + most compatible path (no planeData)
-    final rotation = InputImageRotationValue.fromRawValue(sensorOrientation)
-        ?? InputImageRotation.rotation0deg;
-
-    final Plane yPlane = img.planes.first; // Y plane
-    return InputImage.fromBytes(
-      bytes: yPlane.bytes,
-      metadata: InputImageMetadata(
-        size: Size(img.width.toDouble(), img.height.toDouble()),
-        rotation: rotation,
-        format: InputImageFormat.nv21,      // <- no planeData needed
-        bytesPerRow: yPlane.bytesPerRow,    // <- required here
-      ),
-    );      
+      // ANDROID: simplest + most compatible path (NV21 using Y plane)
+      final yPlane = img.planes.first;
+      return InputImage.fromBytes(
+        bytes: yPlane.bytes,
+        metadata: InputImageMetadata(
+          size: Size(img.width.toDouble(), img.height.toDouble()),
+          rotation: rotation,
+          format: InputImageFormat.nv21,
+          bytesPerRow: yPlane.bytesPerRow,
+        ),
+      );
     }
   }
 
@@ -107,7 +91,16 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
   void initState() {
     super.initState();
 
-    _an = FormAnalyzer(cfg: FCConfig.defaultSquat(), fps: 30.0 /* kept for metrics only */);
+    _an = FormAnalyzer(
+      cfg: FCConfig.defaultSquat(),
+      fps: 30.0, // used for sampling; tempo uses real timestamps
+      onRep: (_) {
+        if (!mounted) return;
+        setState(() {
+          _reps = _an.reps.length;   // ✅ source of truth
+        });
+      },
+    );
 
     _pose = PoseDetector(
       options: PoseDetectorOptions(
@@ -117,11 +110,8 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args =
-          (ModalRoute.of(context)?.settings.arguments ?? {}) as Map<dynamic, dynamic>;
-      setState(() {
-        _exerciseName = (args['exercise'] ?? 'Exercise') as String;
-      });
+      final args = (ModalRoute.of(context)?.settings.arguments ?? {}) as Map?;
+      setState(() => _exerciseName = (args?['exercise'] ?? 'Exercise') as String);
     });
 
     _initCamera();
@@ -132,20 +122,12 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     () async {
       try {
         if (_cam != null) {
-          if (_cam!.value.isStreamingImages) {
-            await _cam!.stopImageStream();
-          }
+          if (_cam!.value.isStreamingImages) await _cam!.stopImageStream();
           await _cam!.dispose();
         }
       } catch (_) {}
-      try {
-        await _pose.close();
-      } catch (_) {}
-      try {
-        _sw
-          ..stop()
-          ..reset();
-      } catch (_) {}
+      try { await _pose.close(); } catch (_) {}
+      try { _sw..stop()..reset(); } catch (_) {}
     }();
     super.dispose();
   }
@@ -166,8 +148,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         back,
         ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup:
-            Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.yuv420,
+        imageFormatGroup: Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.yuv420,
       );
       await _cam!.initialize();
 
@@ -198,14 +179,12 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     return math.acos(cosv) * 180 / math.pi;
   }
 
-  void _updateRepState(double depth) {
+  // live-cue-only fsm (does not change _reps)
+  void _updateLiveCueState(double depth) {
     const downThresh = 0.022;
     const upThresh = -0.006;
     if (_fsm == 'top' && depth > downThresh) _fsm = 'down';
-    if (_fsm == 'down' && depth < upThresh) {
-      _fsm = 'top';
-      _reps++;
-    }
+    if (_fsm == 'down' && depth < upThresh) _fsm = 'top';
   }
 
   Future<void> _processFrame(CameraImage img) async {
@@ -221,18 +200,11 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       }
 
       // ---------- FEED ANALYZER (real timestamp) ----------
-      if (!_swStarted) {
-        _swStarted = true;
-        _sw.start();
-      }
+      if (!_swStarted) { _swStarted = true; _sw.start(); }
       final double tMs = _sw.elapsedMilliseconds.toDouble();
 
       final pose = poses.first;
-      _an.addFrame(
-        fidx: ++_fidx,
-        tMs: tMs, // real elapsed ms
-        pose: pose,
-      );
+      _an.addFrame(fidx: ++_fidx, tMs: tMs, pose: pose);
 
       // ---------- LIVE CUES (left side quick heuristic) ----------
       final lm = pose.landmarks;
@@ -247,8 +219,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       }
 
       final W = img.width.toDouble(), Ht = img.height.toDouble();
-      double nx(double v) => v / W;
-      double ny(double v) => v / Ht;
+      double nx(double v) => v / W; double ny(double v) => v / Ht;
 
       final s = _smooth('s', nx(S.x), ny(S.y));
       final h = _smooth('h', nx(Hh.x), ny(Hh.y));
@@ -267,26 +238,20 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       final good = backOk && depthOk && kneeOk;
 
       String cue = '';
-      if (!backOk) {
-        cue = 'Keep chest up / back straighter';
-      } else if (!depthOk) {
-        cue = 'Go deeper (hip below knee)';
-      } else if (!kneeOk) {
-        cue = 'Control knees over toes';
-      }
+      if (!backOk) cue = 'Keep chest up / back straighter';
+      else if (!depthOk) cue = 'Go deeper (hip below knee)';
+      else if (!kneeOk) cue = 'Control knees over toes';
 
       _totalFrames++;
-      if (good) {
-        _goodFrames++;
-        _timeline.add('G');
-      } else {
+      if (good) { _goodFrames++; _timeline.add('G'); }
+      else {
         _timeline.add('B');
         if (cue.isNotEmpty && _cueCounts.containsKey(cue)) {
           _cueCounts[cue] = (_cueCounts[cue] ?? 0) + 1;
         }
       }
 
-      _updateRepState(depth);
+      _updateLiveCueState(depth);
 
       if (mounted) {
         setState(() {
@@ -305,12 +270,9 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     try {
       final cams = await availableCameras();
       if (_cam == null || cams.isEmpty) return;
-      final isFront =
-          _cam!.description.lensDirection == CameraLensDirection.front;
+      final isFront = _cam!.description.lensDirection == CameraLensDirection.front;
       final next = cams.firstWhere(
-        (c) =>
-            c.lensDirection ==
-            (isFront ? CameraLensDirection.back : CameraLensDirection.front),
+        (c) => c.lensDirection == (isFront ? CameraLensDirection.back : CameraLensDirection.front),
         orElse: () => cams.first,
       );
       if (_cam!.value.isStreamingImages) await _cam!.stopImageStream();
@@ -319,8 +281,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         next,
         ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup:
-            Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.yuv420,
+        imageFormatGroup: Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.yuv420,
       );
       await _cam!.initialize();
       await _cam!.startImageStream(_onImage);
@@ -331,27 +292,16 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
   }
 
   Future<void> _endSession() async {
-    try {
-      if (_cam?.value.isStreamingImages == true) {
-        await _cam!.stopImageStream();
-      }
-    } catch (_) {}
-    try {
-      if (_swStarted && _sw.isRunning) _sw.stop();
-    } catch (_) {}
+    try { if (_cam?.value.isStreamingImages == true) await _cam!.stopImageStream(); } catch (_) {}
+    try { if (_swStarted && _sw.isRunning) _sw.stop(); } catch (_) {}
 
     final session = _an.buildSessionJson(videoName: "live_camera");
-
-    final file =
-        await FCStorage.writeSessionJson(session, filename: "squat_validation.json");
+    final file = await FCStorage.writeSessionJson(session, filename: "squat_validation.json");
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Exported JSON: ${file.path}')),
     );
-
-    // Optionally share:
-    // await Share.shareXFiles([XFile(file.path)], text: 'Form session JSON');
 
     Navigator.pushNamed(
       context,
@@ -385,11 +335,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       appBar: AppBar(
         title: Text('$_exerciseName'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            onPressed: _endSession,
-            tooltip: 'End & Export',
-          )
+          IconButton(icon: const Icon(Icons.ios_share), onPressed: _endSession, tooltip: 'End & Export')
         ],
       ),
       body: !ready
@@ -410,11 +356,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                     ),
                     child: Text(
                       '$_exerciseName • Reps: $_reps',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -439,15 +381,8 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.92),
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(24)),
-                      boxShadow: const [
-                        BoxShadow(
-                          blurRadius: 16,
-                          color: Colors.black26,
-                          offset: Offset(0, -4),
-                        )
-                      ],
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      boxShadow: const [BoxShadow(blurRadius: 16, color: Colors.black26, offset: Offset(0, -4))],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -455,9 +390,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                         Expanded(
                           child: Center(
                             child: Text(
-                              _cue.isEmpty
-                                  ? 'Step back so I can see hips, knees, and ankles'
-                                  : _cue,
+                              _cue.isEmpty ? 'Step back so I can see hips, knees, and ankles' : _cue,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 22,
@@ -474,11 +407,8 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(
-                                  _good ? Icons.check_circle : Icons.error_rounded,
-                                  color: _good ? Colors.green : Colors.red,
-                                  size: 18,
-                                ),
+                                Icon(_good ? Icons.check_circle : Icons.error_rounded,
+                                    color: _good ? Colors.green : Colors.red, size: 18),
                                 const SizedBox(width: 6),
                                 Text(
                                   _good ? 'Good form' : 'Needs adjustment',
@@ -491,20 +421,13 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                               ],
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              'Reps: $_reps',
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600),
-                            ),
+                            Text('Reps: $_reps', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                           ],
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
-                          child: FilledButton(
-                            onPressed: _endSession,
-                            child: const Text('End Session'),
-                          ),
+                          child: FilledButton(onPressed: _endSession, child: const Text('End Session')),
                         ),
                       ],
                     ),

@@ -1,4 +1,3 @@
-// lib/formcheck/rep_segmenter.dart
 class RepEvent {
   final int start, bottom, end;
   RepEvent({required this.start, required this.bottom, required this.end});
