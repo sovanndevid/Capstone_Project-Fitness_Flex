@@ -1,42 +1,77 @@
-class RepEvent { final int start, bottom, end; RepEvent(this.start, this.bottom, this.end); }
+
+class RepEvent {
+  final int start;
+  final int bottom;
+  final int end;
+  RepEvent({required this.start, required this.bottom, required this.end});
+}
 
 class RepSegmenter {
-  final double fps;
-  final int minF, maxF;
-  final double standDeg, bottomDeg;
+  final double minMs;
+  final double maxMs;
+  final double standDeg;
+  final double bottomDeg;
 
   String _state = "STAND";
   int? _startF;
   int? _bottomF;
+  double? _startT;   // ms
+  double? _bottomT;  // ms
 
   RepSegmenter({
-    required this.fps,
     required double minSec,
     required double maxSec,
     required this.standDeg,
     required this.bottomDeg,
-  })  : minF = (minSec * fps).toInt(),
-        maxF = (maxSec * fps).toInt();
+  })  : minMs = minSec * 1000.0,
+        maxMs = maxSec * 1000.0;
 
-  void _reset() { _startF = null; _bottomF = null; }
+  void _reset() {
+    _startF = null;
+    _bottomF = null;
+    _startT = null;
+    _bottomT = null;
+  }
 
-  RepEvent? update(int fidx, double kneeDegMinBoth) {
+  /// Update with current frame index, timestamp (ms since session start),
+  /// and knee angle (min of L/R). Returns RepEvent when a rep completes.
+  RepEvent? update(int fidx, double tMs, double kneeDeg) {
     switch (_state) {
       case "STAND":
-        if (kneeDegMinBoth < standDeg) { _state = "DOWN"; _startF = fidx; }
+        if (kneeDeg < standDeg) {
+          _state = "DOWN";
+          _startF = fidx;
+          _startT = tMs;
+        }
         break;
+
       case "DOWN":
-        if (kneeDegMinBoth < bottomDeg) { _state = "BOTTOM"; _bottomF = fidx; }
-        if (_startF != null && fidx - _startF! > maxF) { _state = "STAND"; _reset(); }
+        if (kneeDeg < bottomDeg) {
+          _state = "BOTTOM";
+          _bottomF = fidx;
+          _bottomT = tMs;
+        }
+        // timeout
+        if (_startT != null && (tMs - _startT!) > maxMs) {
+          _state = "STAND";
+          _reset();
+        }
         break;
+
       case "BOTTOM":
-        if (kneeDegMinBoth > standDeg && _bottomF != null && _startF != null) {
+        if (kneeDeg > standDeg && _bottomF != null && _startF != null && _startT != null) {
           final endF = fidx;
-          final dur = endF - _startF!;
-          final ok = dur >= minF && dur <= maxF;
-          final rep = ok ? RepEvent(_startF!, _bottomF!, endF) : null;
-          _state = "STAND"; _reset();
-          return rep;
+          final endT = tMs;
+          final durMs = endT - _startT!;
+          if (durMs >= minMs && durMs <= maxMs) {
+            final evt = RepEvent(start: _startF!, bottom: _bottomF!, end: endF);
+            _state = "STAND";
+            _reset();
+            return evt;
+          } else {
+            _state = "STAND";
+            _reset();
+          }
         }
         break;
     }

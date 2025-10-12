@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -54,14 +55,59 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
   };
   final List<String> _timeline = [];
 
+  // frame index and real-time clock
   int _fidx = -1;
-  static const double _assumedFps = 30.0;
+  final Stopwatch _sw = Stopwatch();
+  bool _swStarted = false;
+
+  // concat planes for Android YUV420
+  Uint8List _concatPlanes(List<Plane> planes) {
+    final b = BytesBuilder();
+    for (final p in planes) {
+      b.add(p.bytes);
+    }
+    return b.toBytes();
+  }
+
+  InputImage _buildInputImage(CameraImage img, int sensorOrientation) {
+    final rotation = InputImageRotationValue.fromRawValue(sensorOrientation) ??
+        InputImageRotation.rotation0deg;
+
+    if (Platform.isIOS) {
+      // iOS = BGRA8888 single plane
+      final plane = img.planes.first;
+      return InputImage.fromBytes(
+        bytes: plane.bytes,
+        metadata: InputImageMetadata(
+          size: Size(img.width.toDouble(), img.height.toDouble()),
+          rotation: rotation,
+          format: InputImageFormat.bgra8888,
+          bytesPerRow: plane.bytesPerRow,
+        ),
+      );
+    } else {
+// ANDROID: simplest + most compatible path (no planeData)
+    final rotation = InputImageRotationValue.fromRawValue(sensorOrientation)
+        ?? InputImageRotation.rotation0deg;
+
+    final Plane yPlane = img.planes.first; // Y plane
+    return InputImage.fromBytes(
+      bytes: yPlane.bytes,
+      metadata: InputImageMetadata(
+        size: Size(img.width.toDouble(), img.height.toDouble()),
+        rotation: rotation,
+        format: InputImageFormat.nv21,      // <- no planeData needed
+        bytesPerRow: yPlane.bytesPerRow,    // <- required here
+      ),
+    );      
+    }
+  }
 
   @override
   void initState() {
     super.initState();
 
-    _an = FormAnalyzer(cfg: FCConfig.defaultSquat(), fps: _assumedFps);
+    _an = FormAnalyzer(cfg: FCConfig.defaultSquat(), fps: 30.0 /* kept for metrics only */);
 
     _pose = PoseDetector(
       options: PoseDetectorOptions(
@@ -94,6 +140,11 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
       } catch (_) {}
       try {
         await _pose.close();
+      } catch (_) {}
+      try {
+        _sw
+          ..stop()
+          ..reset();
       } catch (_) {}
     }();
     super.dispose();
@@ -129,6 +180,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     }
   }
 
+  // throttle: process every 3rd frame
   int _skip = 0;
   Future<void> _onImage(CameraImage img) async {
     if ((_skip++ % 3) != 0) return;
@@ -160,21 +212,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
     if (_busy) return;
     _busy = true;
     try {
-      final plane = img.planes.first;
-      final rotation = InputImageRotationValue.fromRawValue(
-            _cam?.description.sensorOrientation ?? 0,
-          ) ??
-          InputImageRotation.rotation0deg;
-
-      final input = InputImage.fromBytes(
-        bytes: plane.bytes,
-        metadata: InputImageMetadata(
-          size: Size(img.width.toDouble(), img.height.toDouble()),
-          rotation: rotation,
-          format: Platform.isIOS ? InputImageFormat.bgra8888 : InputImageFormat.nv21,
-          bytesPerRow: plane.bytesPerRow,
-        ),
-      );
+      final input = _buildInputImage(img, _cam?.description.sensorOrientation ?? 0);
 
       final poses = await _pose.processImage(input);
       if (poses.isEmpty) {
@@ -182,16 +220,21 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         return;
       }
 
-      // Feed analyzer
-      _fidx++;
+      // ---------- FEED ANALYZER (real timestamp) ----------
+      if (!_swStarted) {
+        _swStarted = true;
+        _sw.start();
+      }
+      final double tMs = _sw.elapsedMilliseconds.toDouble();
+
       final pose = poses.first;
       _an.addFrame(
-        fidx: _fidx,
-        tMs: _fidx * (1000.0 / _assumedFps),
+        fidx: ++_fidx,
+        tMs: tMs, // real elapsed ms
         pose: pose,
       );
 
-      // Live cues (left side quick heuristic)
+      // ---------- LIVE CUES (left side quick heuristic) ----------
       final lm = pose.landmarks;
       final S = lm[PoseLandmarkType.leftShoulder];
       final Hh = lm[PoseLandmarkType.leftHip];
@@ -293,6 +336,9 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
         await _cam!.stopImageStream();
       }
     } catch (_) {}
+    try {
+      if (_swStarted && _sw.isRunning) _sw.stop();
+    } catch (_) {}
 
     final session = _an.buildSessionJson(videoName: "live_camera");
 
@@ -352,12 +398,12 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
               children: [
                 CameraPreview(_cam!),
 
+                // status
                 Positioned(
                   left: 16,
                   top: 16,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(12),
@@ -373,6 +419,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                   ),
                 ),
 
+                // switch camera
                 Positioned(
                   right: 8,
                   top: 12,
@@ -383,6 +430,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                   ),
                 ),
 
+                // bottom coach panel
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
@@ -414,8 +462,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
-                                color:
-                                    _good ? Colors.green[700] : Colors.red[700],
+                                color: _good ? Colors.green[700] : Colors.red[700],
                                 height: 1.2,
                               ),
                             ),
@@ -428,9 +475,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                             Row(
                               children: [
                                 Icon(
-                                  _good
-                                      ? Icons.check_circle
-                                      : Icons.error_rounded,
+                                  _good ? Icons.check_circle : Icons.error_rounded,
                                   color: _good ? Colors.green : Colors.red,
                                   size: 18,
                                 ),
@@ -439,9 +484,7 @@ class _FormCheckerScreenState extends State<FormCheckerScreen> {
                                   _good ? 'Good form' : 'Needs adjustment',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: _good
-                                        ? Colors.green[800]
-                                        : Colors.red[800],
+                                    color: _good ? Colors.green[800] : Colors.red[800],
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

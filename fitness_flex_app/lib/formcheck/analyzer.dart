@@ -84,15 +84,15 @@ class FormAnalyzer {
   double? _stanceScale;
   double? _stanceValgusRatio;
 
-  FormAnalyzer({required this.cfg, required this.fps}) {
-    _seg = RepSegmenter(
-      fps: fps,
-      minSec: cfg.minRepSec,
-      maxSec: cfg.maxRepSec,
-      standDeg: (cfg.thresholds["knee_standing_deg"] as num).toDouble(),
-      bottomDeg: (cfg.thresholds["knee_bottom_deg"] as num).toDouble(),
-    );
-  }
+FormAnalyzer({required this.cfg, required this.fps}) {
+  _seg = RepSegmenter(
+    minSec: cfg.minRepSec,
+    maxSec: cfg.maxRepSec,
+    standDeg: (cfg.thresholds["knee_standing_deg"] as num).toDouble(),
+    bottomDeg: (cfg.thresholds["knee_bottom_deg"] as num).toDouble(),
+  );
+}
+
 
   // ----- helpers -----
   double _asDouble(Object? v, [double fallback = 0.0]) =>
@@ -228,16 +228,16 @@ class FormAnalyzer {
     final conf = math.min(1.0, math.log(confBase) / math.log(1.3));
     return (label, conf.isFinite ? conf.abs() : 0.5);
   }
-
   void _trySegment(FrameFeatures f) {
-    final kneeMin = math.min(f.kneeL, f.kneeR);
-    final evt = _seg.update(f.fidx, kneeMin);
-    if (evt != null) {
-      _repCount += 1;
-      final rep = _buildRep(evt, _repCount);
-      _reps.add(rep);
-    }
+  final kneeMin = math.min(f.kneeL, f.kneeR);
+  final evt = _seg.update(f.fidx, f.tMs, kneeMin); // pass timestamp!
+  if (evt != null) {
+    _repCount += 1;
+    final rep = _buildRep(evt, _repCount);
+    _reps.add(rep);
   }
+}
+
 
   RepSummary _buildRep(RepEvent evt, int id) {
     final slice =
