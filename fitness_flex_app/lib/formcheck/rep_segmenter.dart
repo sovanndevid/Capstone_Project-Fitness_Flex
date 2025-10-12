@@ -1,11 +1,10 @@
-
+// lib/formcheck/rep_segmenter.dart
 class RepEvent {
-  final int start;
-  final int bottom;
-  final int end;
+  final int start, bottom, end;
   RepEvent({required this.start, required this.bottom, required this.end});
 }
 
+/// Matches Python FSM semantics but uses milliseconds so it's robust to variable FPS.
 class RepSegmenter {
   final double minMs;
   final double maxMs;
@@ -13,10 +12,8 @@ class RepSegmenter {
   final double bottomDeg;
 
   String _state = "STAND";
-  int? _startF;
-  int? _bottomF;
-  double? _startT;   // ms
-  double? _bottomT;  // ms
+  int? _startF, _bottomF;
+  double? _startTms, _bottomTms;
 
   RepSegmenter({
     required double minSec,
@@ -27,21 +24,18 @@ class RepSegmenter {
         maxMs = maxSec * 1000.0;
 
   void _reset() {
-    _startF = null;
-    _bottomF = null;
-    _startT = null;
-    _bottomT = null;
+    _startF = _bottomF = null;
+    _startTms = _bottomTms = null;
   }
 
-  /// Update with current frame index, timestamp (ms since session start),
-  /// and knee angle (min of L/R). Returns RepEvent when a rep completes.
-  RepEvent? update(int fidx, double tMs, double kneeDeg) {
+  /// Update with frame index, timestamp (ms), and knee angle (min L/R).
+  RepEvent? update({required int fidx, required double tMs, required double kneeDeg}) {
     switch (_state) {
       case "STAND":
         if (kneeDeg < standDeg) {
           _state = "DOWN";
           _startF = fidx;
-          _startT = tMs;
+          _startTms = tMs;
         }
         break;
 
@@ -49,22 +43,19 @@ class RepSegmenter {
         if (kneeDeg < bottomDeg) {
           _state = "BOTTOM";
           _bottomF = fidx;
-          _bottomT = tMs;
+          _bottomTms = tMs;
         }
-        // timeout
-        if (_startT != null && (tMs - _startT!) > maxMs) {
+        if (_startTms != null && (tMs - _startTms!) > maxMs) {
           _state = "STAND";
           _reset();
         }
         break;
 
       case "BOTTOM":
-        if (kneeDeg > standDeg && _bottomF != null && _startF != null && _startT != null) {
-          final endF = fidx;
-          final endT = tMs;
-          final durMs = endT - _startT!;
+        if (kneeDeg > standDeg && _bottomF != null && _startF != null && _startTms != null) {
+          final durMs = tMs - _startTms!;
           if (durMs >= minMs && durMs <= maxMs) {
-            final evt = RepEvent(start: _startF!, bottom: _bottomF!, end: endF);
+            final evt = RepEvent(start: _startF!, bottom: _bottomF!, end: fidx);
             _state = "STAND";
             _reset();
             return evt;

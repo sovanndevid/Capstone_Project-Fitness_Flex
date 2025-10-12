@@ -228,15 +228,20 @@ FormAnalyzer({required this.cfg, required this.fps}) {
     final conf = math.min(1.0, math.log(confBase) / math.log(1.3));
     return (label, conf.isFinite ? conf.abs() : 0.5);
   }
-  void _trySegment(FrameFeatures f) {
+void _trySegment(FrameFeatures f) {
   final kneeMin = math.min(f.kneeL, f.kneeR);
-  final evt = _seg.update(f.fidx, f.tMs, kneeMin); // pass timestamp!
+  final evt = _seg.update(
+    fidx: f.fidx,
+    tMs: f.tMs,        // ← pass real milliseconds, not frame math
+    kneeDeg: kneeMin,
+  );
   if (evt != null) {
     _repCount += 1;
     final rep = _buildRep(evt, _repCount);
     _reps.add(rep);
   }
 }
+
 
 
   RepSummary _buildRep(RepEvent evt, int id) {
@@ -315,9 +320,13 @@ FormAnalyzer({required this.cfg, required this.fps}) {
       hipDepthNorm = (hipMaxY - hipYMean) / scale;
     }
 
-    // tempo
-    final eccMs = (bottomIdx - evt.start) * 1000.0 / fps;
-    final conMs = (evt.end - bottomIdx) * 1000.0 / fps;
+// tempo (use timestamps, not index math)
+final startT = _frames.firstWhere((f) => f.fidx == evt.start).tMs;
+final bottomT = _frames.firstWhere((f) => f.fidx == bottomIdx).tMs;
+final endT = _frames.firstWhere((f) => f.fidx == evt.end).tMs;
+
+final eccMs = (bottomT - startT).clamp(1.0, double.infinity);
+final conMs = (endT - bottomT).clamp(1.0, double.infinity);
 
     // camera motion
     final ax = _std(slice.map((e) => e.ankle.dx));
