@@ -122,7 +122,9 @@ class _ProgressPageState extends State<ProgressPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        title: const Text('Progress',style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
+        title: const Text(
+          'Progress',
+          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
         ),
       ),
       body: RefreshIndicator(
@@ -364,27 +366,56 @@ class _ProgressPageState extends State<ProgressPage> {
           ],
         ),
       ),
-bottomNavigationBar: NavigationBar(
-  selectedIndex: 3,  
-  onDestinationSelected: (index) {
-    if (index == 1) return; // already here
-    switch (index) {
-      case 0: Navigator.pushReplacementNamed(context, AppRouter.home); break;
-      case 1: /* current page */ break;
-      case 2: Navigator.pushReplacementNamed(context, AppRouter.nutrition); break;
-      case 3: Navigator.pushReplacementNamed(context, AppRouter.progress); break;
-      case 4: Navigator.pushReplacementNamed(context, AppRouter.profile); break;
-    }
-  },
-  destinations: const [
-    NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-    NavigationDestination(icon: Icon(Icons.fitness_center_outlined), selectedIcon: Icon(Icons.fitness_center), label: 'Workouts'),
-    NavigationDestination(icon: Icon(Icons.restaurant_outlined), selectedIcon: Icon(Icons.restaurant), label: 'Nutrition'),
-    NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Progress'),
-    NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
-  ],
-),
-    );  
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 3,
+        onDestinationSelected: (index) {
+          if (index == 1) return; // already here
+          switch (index) {
+            case 0:
+              Navigator.pushReplacementNamed(context, AppRouter.home);
+              break;
+            case 1: /* current page */
+              break;
+            case 2:
+              Navigator.pushReplacementNamed(context, AppRouter.nutrition);
+              break;
+            case 3:
+              Navigator.pushReplacementNamed(context, AppRouter.progress);
+              break;
+            case 4:
+              Navigator.pushReplacementNamed(context, AppRouter.profile);
+              break;
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.fitness_center_outlined),
+            selectedIcon: Icon(Icons.fitness_center),
+            label: 'Workouts',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.restaurant_outlined),
+            selectedIcon: Icon(Icons.restaurant),
+            label: 'Nutrition',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights),
+            label: 'Progress',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
   }
 
   // ===== Firestore fetchers =====
@@ -1631,22 +1662,28 @@ class _KpiChip extends StatelessWidget {
         children: [
           Icon(data.icon, color: data.color, size: 18),
           const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                data.label,
-                style: const TextStyle(fontSize: 11, color: Colors.black54),
-              ),
-              Text(
-                data.value,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black,
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.label,
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ), // force dark text
-            ],
+                Text(
+                  data.value,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),

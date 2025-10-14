@@ -410,9 +410,11 @@ class _NutritionPageState extends State<NutritionPage> {
         elevation: 0,
         backgroundColor: Colors.white.withOpacity(.9),
         surfaceTintColor: Colors.white,
-        title: const Text('Nutrition', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
+        title: const Text(
+          'Nutrition',
+          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
         ),
-        
+
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black87),
         actions: [
@@ -499,53 +501,53 @@ class _NutritionPageState extends State<NutritionPage> {
         ),
       ),
       bottomNavigationBar: NavigationBar(
-  selectedIndex: 2, // Nutrition stays selected on this page
-  onDestinationSelected: (index) {
-    if (index == 2) return; // already here
+        selectedIndex: 2, // Nutrition stays selected on this page
+        onDestinationSelected: (index) {
+          if (index == 2) return; // already here
 
-    switch (index) {
-      case 0:
-        Navigator.pushReplacementNamed(context, AppRouter.home);
-        break;
-      case 1:
-        Navigator.pushReplacementNamed(context, AppRouter.workout);
-        break;
-      case 3:
-        Navigator.pushReplacementNamed(context, AppRouter.progress);
-        break;
-      case 4:
-        Navigator.pushReplacementNamed(context, AppRouter.profile);
-        break;
-    }
-  },
-  destinations: const [
-    NavigationDestination(
-      icon: Icon(Icons.home_outlined),
-      selectedIcon: Icon(Icons.home),
-      label: 'Home',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.fitness_center_outlined),
-      selectedIcon: Icon(Icons.fitness_center),
-      label: 'Workouts',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.restaurant_outlined),
-      selectedIcon: Icon(Icons.restaurant),
-      label: 'Nutrition',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.insights_outlined),
-      selectedIcon: Icon(Icons.insights),
-      label: 'Progress',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.person_outline),
-      selectedIcon: Icon(Icons.person),
-      label: 'Profile',
-    ),
-  ],
-),
+          switch (index) {
+            case 0:
+              Navigator.pushReplacementNamed(context, AppRouter.home);
+              break;
+            case 1:
+              Navigator.pushReplacementNamed(context, AppRouter.workout);
+              break;
+            case 3:
+              Navigator.pushReplacementNamed(context, AppRouter.progress);
+              break;
+            case 4:
+              Navigator.pushReplacementNamed(context, AppRouter.profile);
+              break;
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.fitness_center_outlined),
+            selectedIcon: Icon(Icons.fitness_center),
+            label: 'Workouts',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.restaurant_outlined),
+            selectedIcon: Icon(Icons.restaurant),
+            label: 'Nutrition',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights),
+            label: 'Progress',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 
@@ -957,12 +959,14 @@ class _NutritionPageState extends State<NutritionPage> {
                                   '${meal.calories.toStringAsFixed(0)} kcal • '
                                   '${meal.protein.toStringAsFixed(1)}g P • '
                                   '${meal.carbs.toStringAsFixed(1)}g C • '
-                                  '${meal.fat.toStringAsFixed(1)}g Frr ',
+                                  '${meal.fat.toStringAsFixed(1)}g F',
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     color: Colors.grey.shade600,
                                     fontWeight: FontWeight.w500,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -1833,15 +1837,20 @@ class _MealTypeSegmentedControlState extends State<_MealTypeSegmentedControl> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              t[0].toUpperCase() + t.substring(1),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: selected
-                                    ? color.darken(.35)
-                                    : Colors.grey.shade800,
-                                letterSpacing: .2,
+                            Flexible(
+                              child: Text(
+                                t[0].toUpperCase() + t.substring(1),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: selected
+                                      ? color.darken(.35)
+                                      : Colors.grey.shade800,
+                                  letterSpacing: .2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
                               ),
                             ),
                             if (selected)
