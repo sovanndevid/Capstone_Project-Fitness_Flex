@@ -19,7 +19,8 @@ import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
 
 // Features: form check
 import 'package:fitness_flex_app/features/form_check/form_check_menu_page.dart';
-import 'package:fitness_flex_app/features/form_check/form_checker_screen.dart';
+import 'package:fitness_flex_app/features/form_check/form_checker_screen.dart'
+    if (dart.library.html) 'package:fitness_flex_app/features/form_check/form_checker_screen_web.dart';
 import 'package:fitness_flex_app/features/form_check/form_check_summary_page.dart';
 
 

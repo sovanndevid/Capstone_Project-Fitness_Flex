@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:fitness_flex_app/navigation/app_router.dart';
 
 class FormCheckMenuPage extends StatelessWidget {
@@ -55,7 +56,7 @@ class FormCheckMenuPage extends StatelessWidget {
                 ),
                 subtitle: Text(
                   isImplemented
-                      ? 'Live form tracking using ML Kit'
+                      ? (kIsWeb ? 'Open the browser Motion Lab' : 'Live form tracking using ML Kit')
                       : 'Coming soon',
                   style: TextStyle(
                     color: isImplemented ? Colors.green[700] : Colors.grey,

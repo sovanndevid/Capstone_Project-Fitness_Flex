@@ -1,7 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
 class FormCheckSummaryPage extends StatefulWidget {
   const FormCheckSummaryPage({super.key});
@@ -12,9 +9,6 @@ class FormCheckSummaryPage extends StatefulWidget {
 class _FormCheckSummaryPageState extends State<FormCheckSummaryPage> {
   String? _feedback;
   bool _loading = false;
-
-  // Hard-coded for project/dev. Do NOT ship a live app like this.
-  static const String _apiKey = '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';
 
   /// Reduce the analyzer JSON size (cheaper, faster).
   Map<String, dynamic> _thinSession(Map<String, dynamic> s) => {
@@ -47,78 +41,26 @@ class _FormCheckSummaryPageState extends State<FormCheckSummaryPage> {
             .toList(),
       };
 
+  /// Offline-only, rule-based summary. Never call a paid API from the client.
+  /// The original source used an exposed credential; that key must be revoked
+  /// by its owner because Git history cannot make a leaked token safe.
   Future<void> _getAIAdvice({
     required Map<String, dynamic> sessionJson,
     required String exercise,
   }) async {
-    if (sessionJson.isEmpty) {
-      setState(() => _feedback = 'No session JSON found.');
-      return;
-    }
-
-    setState(() => _loading = true);
-
-    const systemPrompt = '''
-You are a supportive strength coach. Given JSON from a squat form analysis, write 90–140 words.
-Priorities: depth, torso lean, stability, tempo, ROM. If front-view data is present, include valgus & symmetry; otherwise skip them.
-Be specific, encouraging, and end with 1–2 concrete tips. English only.
-''';
-
-    final userContent = jsonEncode({
-      'exercise': exercise,
-      'session': _thinSession(sessionJson),
+    final summary = _thinSession(sessionJson);
+    final count = (summary['reps_detected'] as num?)?.toInt() ?? 0;
+    final score = (summary['overall_score_mean'] as num?)?.toDouble();
+    final scoreText = score == null ? 'not available' : score.toStringAsFixed(1);
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _feedback = 'Offline form summary (not trained AI): '
+          '$count repetitions detected for $exercise. '
+          'Experimental rule-based technique score: $scoreText/10. '
+          'Consider your movement control, range of motion, and camera angle. '
+          'A qualified coach can provide personalised technique assessment.';
     });
-
-    final body = jsonEncode({
-      'model': 'gpt-4o-mini',
-      'temperature': 0.6,
-      'max_tokens': 250,
-      'messages': [
-        {'role': 'system', 'content': systemPrompt},
-        {'role': 'user', 'content': userContent},
-      ],
-    });
-
-    final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
-
-    Future<http.Response> _send() => http
-        .post(
-          uri,
-          headers: {
-            HttpHeaders.authorizationHeader: 'Bearer $_apiKey',
-            HttpHeaders.contentTypeHeader: 'application/json',
-          },
-          body: body,
-        )
-        .timeout(const Duration(seconds: 25));
-
-    try {
-      var res = await _send();
-      if (res.statusCode == 429 || res.statusCode >= 500) {
-        await Future.delayed(const Duration(milliseconds: 800));
-        res = await _send();
-      }
-      if (res.statusCode == 429 || res.statusCode >= 500) {
-        await Future.delayed(const Duration(milliseconds: 1200));
-        res = await _send();
-      }
-
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        final data = jsonDecode(res.body);
-        final msg = (data['choices']?[0]?['message']?['content'] ?? '').toString().trim();
-        setState(() => _feedback = msg.isEmpty ? 'No feedback returned.' : msg);
-      } else if (res.statusCode == 401) {
-        setState(() => _feedback = 'Unauthorized: check API key.');
-      } else if (res.statusCode == 429) {
-        setState(() => _feedback = 'Rate limited. Try again shortly.');
-      } else {
-        setState(() => _feedback = 'API error ${res.statusCode}: ${res.body}');
-      }
-    } catch (e) {
-      setState(() => _feedback = 'Network error: $e');
-    } finally {
-      setState(() => _loading = false);
-    }
   }
 
   // ---------- Helpers to coerce route args safely ----------
@@ -277,7 +219,7 @@ Be specific, encouraging, and end with 1–2 concrete tips. English only.
                 icon: const Icon(Icons.psychology_alt),
                 label: Text(_loading
                     ? 'Generating Feedback...'
-                    : (sessionJson.isEmpty ? 'No Session Data' : 'Get AI Feedback')),
+                    : (sessionJson.isEmpty ? 'No Session Data' : 'Get Offline Feedback')),
               ),
             ),
             const SizedBox(height: 16),

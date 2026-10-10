@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:fitness_flex_app/core/themes/app_theme.dart';
-import 'chat_screen.dart';
+import 'chat_screen.dart'
+    if (dart.library.html) 'chat_screen_web.dart';
 import './profile_page.dart';
 
 import 'package:fitness_flex_app/data/repositories/nutrition_repository.dart';
