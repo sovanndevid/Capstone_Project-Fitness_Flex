@@ -405,21 +405,21 @@ class _NutritionPageState extends State<NutritionPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F1), // light neutral background
+      backgroundColor: AppTheme.darkBackground, // shared dark background
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white.withOpacity(.9),
-        surfaceTintColor: Colors.white,
+        backgroundColor: AppTheme.darkBackground,
+        surfaceTintColor: Colors.transparent,
         title: const Text(
           'Nutrition',
-          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
+          style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.darkText),
         ),
 
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: const IconThemeData(color: AppTheme.darkText),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_rounded, color: Colors.black87),
+            icon: const Icon(Icons.settings_rounded, color: AppTheme.darkText),
             onPressed: () {
               Navigator.push(
                 context,
@@ -438,7 +438,7 @@ class _NutritionPageState extends State<NutritionPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFF5F6F1), Color(0xFFF5F6F1)],
+            colors: [AppTheme.darkBackground, AppTheme.darkBackground, AppTheme.darkBackground],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -962,7 +962,7 @@ class _NutritionPageState extends State<NutritionPage> {
                                   '${meal.fat.toStringAsFixed(1)}g F',
                                   style: TextStyle(
                                     fontSize: 12.5,
-                                    color: Colors.grey.shade600,
+                                    color: AppTheme.darkMuted,
                                     fontWeight: FontWeight.w500,
                                   ),
                                   maxLines: 1,
@@ -1156,7 +1156,7 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        color: Colors.white, // was Theme.of(context).cardColor.withOpacity(.9)
+        color: AppTheme.darkSurface,
         border: Border.all(color: Colors.grey.withOpacity(.07)),
         boxShadow: [
           BoxShadow(
@@ -1188,7 +1188,7 @@ class _SectionCard extends StatelessWidget {
                                 fontSize: 16.5,
                                 fontWeight: FontWeight.w700,
                                 color:
-                                    Colors.black87, // ensure visible on white
+                                    AppTheme.darkText, // ensure visible on white
                               ),
                             ),
                         ],
@@ -1201,7 +1201,7 @@ class _SectionCard extends StatelessWidget {
                         subtitle!,
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: Colors.grey.shade600,
+                          color: AppTheme.darkMuted,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1325,14 +1325,14 @@ class _CalorieRing extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: over ? Colors.redAccent : Colors.black87,
+                  color: over ? Colors.redAccent : AppTheme.darkText,
                 ),
               ),
               Text(
                 '/${goal.toStringAsFixed(0)} kcal',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey.shade600,
+                  color: AppTheme.darkMuted,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1830,7 +1830,7 @@ class _MealTypeSegmentedControlState extends State<_MealTypeSegmentedControl> {
                           size: 22,
                           color: selected
                               ? color.darken(.25)
-                              : Colors.grey.shade600,
+                              : AppTheme.darkMuted,
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -1992,7 +1992,7 @@ class _MacroProgressRow extends StatelessWidget {
                       'Goal ${goal.toStringAsFixed(0)}',
                       style: TextStyle(
                         fontSize: 10.5,
-                        color: Colors.grey.shade600,
+                        color: AppTheme.darkMuted,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

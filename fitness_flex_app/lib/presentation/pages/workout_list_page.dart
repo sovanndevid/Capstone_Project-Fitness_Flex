@@ -73,23 +73,23 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
       fontSize: 18,
       fontWeight: FontWeight.w700,
       letterSpacing: .2,
-      color: Colors.black,
+      color: AppTheme.darkText,
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F1),
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         title: const Text(
           'Workouts',
-          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
+          style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.darkText),
         ),
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        surfaceTintColor: Colors.white,
+        backgroundColor: AppTheme.darkBackground,
+        foregroundColor: AppTheme.darkText,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: Colors.black87),
+            icon: const Icon(Icons.search, color: AppTheme.darkText),
             onPressed: () {
               Navigator.push(
                 context,
@@ -100,7 +100,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black87),
+            icon: const Icon(Icons.refresh, color: AppTheme.darkText),
             onPressed: _refreshData,
           ),
         ],
@@ -108,7 +108,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFF5F6F1), Color(0xFFF5F6F1)],
+            colors: [AppTheme.darkBackground, AppTheme.darkBackground, AppTheme.darkBackground],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -197,7 +197,7 @@ bottomNavigationBar: NavigationBar(
           return Text(
             'No workouts completed today yet.',
             style: TextStyle(
-              color: Colors.grey.shade700,
+              color: AppTheme.darkMuted,
               fontWeight: FontWeight.w600,
             ),
           );
@@ -209,7 +209,7 @@ bottomNavigationBar: NavigationBar(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.darkSurface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.withOpacity(.08)),
                 boxShadow: [
@@ -234,7 +234,7 @@ bottomNavigationBar: NavigationBar(
                         const SizedBox(height: 2),
                         Text('Completed at $time',
                             style: TextStyle(
-                              color: Colors.grey.shade600,
+                              color: AppTheme.darkMuted,
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             )),
@@ -417,7 +417,7 @@ Widget _buildPopularWorkoutsSection() {
 
     return Card(
       elevation: 2,
-      color: Colors.white,
+      color: AppTheme.darkSurface,
       shadowColor: Colors.black.withOpacity(.06),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
@@ -446,7 +446,7 @@ Widget _buildPopularWorkoutsSection() {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE8EEE5),
+                      color: const AppTheme.darkRaised,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Colors.black.withOpacity(.05)),
                     ),
@@ -471,7 +471,7 @@ Widget _buildPopularWorkoutsSection() {
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: Colors.black,
+                            color: AppTheme.darkText,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -479,7 +479,7 @@ Widget _buildPopularWorkoutsSection() {
                           workout.category,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey[600],
+                            color: AppTheme.darkMuted,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -594,9 +594,9 @@ Widget _buildPopularWorkoutsSection() {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16, color: AppTheme.darkMuted),
         const SizedBox(width: 4),
-        Text(text, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(text, style: TextStyle(fontSize: 12, color: AppTheme.darkMuted)),
       ],
     );
   }
@@ -716,7 +716,7 @@ Widget _buildPopularWorkoutsSection() {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              color: Colors.white.withOpacity(.92),
+              color: AppTheme.darkSurface.withOpacity(.96),
               border: Border.all(color: Colors.black.withOpacity(.05)),
               boxShadow: [
                 BoxShadow(
@@ -734,7 +734,7 @@ Widget _buildPopularWorkoutsSection() {
                   child: Text(
                     'Search workouts, categories...',
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: AppTheme.darkMuted,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w500,
                       letterSpacing: .2,
@@ -1110,7 +1110,7 @@ class _WorkoutHeroSliderState extends State<_WorkoutHeroSlider> {
         child: Stack(
           children: [
             // Black base to avoid white flashes
-            const Positioned.fill(child: ColoredBox(color: Colors.black)),
+            const Positioned.fill(child: ColoredBox(color: AppTheme.darkText)),
             PageView.builder(
               controller: _controller,
               allowImplicitScrolling: true, // prebuild neighbors

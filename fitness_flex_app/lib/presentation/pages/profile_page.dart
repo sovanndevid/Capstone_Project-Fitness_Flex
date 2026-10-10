@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitness_flex_app/core/themes/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -182,7 +183,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final theme = Theme.of(context);
 
     // Consistent light background like other pages
-    final bg = const Color(0xFFF5F7FA);
+    final bg = AppTheme.darkBackground;
 
     if (_loading) {
       return Scaffold(
@@ -207,7 +208,7 @@ class _ProfilePageState extends State<ProfilePage> {
         .toUpperCase();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.darkBackground,
       body: RefreshIndicator(
         onRefresh: _load,
         child: CustomScrollView(
@@ -531,7 +532,7 @@ class _HeroHeaderProfile extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 54, 16, 18),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.white, Color(0xFFEFF3FF), Colors.white],
+          colors: [AppTheme.darkSurface, AppTheme.darkRaised, AppTheme.darkSurface],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -553,7 +554,7 @@ class _HeroHeaderProfile extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: AppTheme.darkText,
                         ),
                       )
                     : null,
@@ -588,7 +589,7 @@ class _HeroHeaderProfile extends StatelessWidget {
             child: RichText(
               text: TextSpan(
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: Colors.black87,
+                  color: AppTheme.darkText,
                   fontWeight: FontWeight.w500,
                 ),
                 children: [
@@ -598,7 +599,7 @@ class _HeroHeaderProfile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: AppTheme.darkText,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -606,7 +607,7 @@ class _HeroHeaderProfile extends StatelessWidget {
                     text: '\n$email',
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: Colors.black54,
+                      color: AppTheme.darkMuted,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -616,7 +617,7 @@ class _HeroHeaderProfile extends StatelessWidget {
           ),
           IconButton(
             onPressed: onChangePhoto,
-            icon: const Icon(Icons.edit, color: Colors.black87),
+            icon: const Icon(Icons.edit, color: AppTheme.darkText),
             tooltip: 'Change photo',
           ),
         ],
@@ -642,7 +643,7 @@ class _MiniStatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.darkSurface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(.3)),
         boxShadow: [
@@ -666,7 +667,7 @@ class _MiniStatCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                    style: const TextStyle(fontSize: 12, color: AppTheme.darkMuted)),
                 const SizedBox(height: 2),
                 Text(
                   value,
@@ -701,7 +702,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.darkSurface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(.3)),
         boxShadow: [
@@ -747,7 +748,7 @@ class _FieldLabel extends StatelessWidget {
     return Text(
       text,
       style:
-          const TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
+          const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.darkText),
     );
   }
 }
@@ -777,11 +778,11 @@ class _ChoiceRow<T> extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: selected ? Colors.blue.withOpacity(.10) : Colors.white,
+              color: selected ? AppTheme.secondaryColor.withOpacity(.2) : AppTheme.darkSurface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: selected
-                    ? Colors.blue.withOpacity(.35)
+                    ? AppTheme.secondaryColor.withOpacity(.45)
                     : Colors.grey.withOpacity(.25),
               ),
               boxShadow: [
@@ -796,13 +797,13 @@ class _ChoiceRow<T> extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 18, color: selected ? Colors.blue : Colors.black54),
+                Icon(icon, size: 18, color: selected ? AppTheme.secondaryColor : AppTheme.darkMuted),
                 const SizedBox(width: 8),
                 Text(
                   label,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: selected ? Colors.blue.shade700 : Colors.black87,
+                    color: selected ? AppTheme.secondaryColor : AppTheme.darkText,
                   ),
                 ),
               ],

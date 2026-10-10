@@ -124,7 +124,7 @@ class _ProgressPageState extends State<ProgressPage> {
         backgroundColor: Colors.transparent,
         title: const Text(
           'Progress',
-          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black),
+          style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.darkText),
         ),
       ),
       body: RefreshIndicator(
@@ -1468,7 +1468,7 @@ class _ProgressPageState extends State<ProgressPage> {
               fontWeight: FontWeight.w600,
               color: selected
                   ? AppTheme.primaryColor
-                  : Colors.black87, // readable text
+                  : AppTheme.darkText, // readable text
             ),
           ),
         ),
@@ -1668,7 +1668,7 @@ class _KpiChip extends StatelessWidget {
               children: [
                 Text(
                   data.label,
-                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  style: const TextStyle(fontSize: 11, color: AppTheme.darkMuted),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1677,7 +1677,7 @@ class _KpiChip extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: Colors.black,
+                    color: AppTheme.darkText,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

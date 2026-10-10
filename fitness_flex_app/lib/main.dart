@@ -55,7 +55,7 @@ class FitnessFlexApp extends StatelessWidget {
       title: 'FitnessFlex',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark,
       // Go straight to sign-in/guest on web; avoid a mandatory splash and
       // three onboarding screens on every browser visit.
       initialRoute: kIsWeb ? AppRouter.login : AppRouter.splash,

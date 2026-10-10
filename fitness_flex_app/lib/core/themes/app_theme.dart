@@ -13,6 +13,10 @@ class AppTheme {
   static const borderColor = Color(0xFFD9DED7);
   static const darkSurface = Color(0xFF181F29);
   static const darkBackground = Color(0xFF101820);
+  static const darkText = Color(0xFFF0F5F0);
+  static const darkMuted = Color(0xFFAEBEBA);
+  static const darkRaised = Color(0xFF202E35);
+  static const darkBorder = Color(0xFF39484E);
 
   static ThemeData _build(bool dark) {
     final surface = dark ? darkSurface : Colors.white;

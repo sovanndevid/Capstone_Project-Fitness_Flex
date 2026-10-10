@@ -134,9 +134,9 @@ class _GuestExperiencePageState extends State<GuestExperiencePage> {
     return Container(
       padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.darkSurface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppTheme.borderColor)),
+        border: Border.all(color: AppTheme.darkBorder)),
       child: child,
     );
   }

@@ -107,26 +107,13 @@ class _HomePageState extends State<HomePage> {
         (authUser?.email != null ? authUser!.email!.split('@').first : 'Athlete');
     final name = rawName.toString().trim().capitalize();
 
-    final lightTheme = baseTheme.copyWith(
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: const Color(0xFFF5F6F1),
-      colorScheme: baseTheme.colorScheme.copyWith(
-        brightness: Brightness.light,
-        background: const Color(0xFFF5F6F1),
-        surface: Colors.white,
-        onBackground: Colors.black,
-        onSurface: Colors.black,
-      ),
-      textTheme: baseTheme.textTheme.apply(
-        bodyColor: Colors.black,
-        displayColor: Colors.black,
-      ),
-    );
+    // Inherit the app-wide dark color scheme rather than forcing light mode.
+    final darkTheme = baseTheme;
 
     return Theme(
-      data: lightTheme,
+      data: darkTheme,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F6F1),
+        backgroundColor: AppTheme.darkBackground,
         body: RefreshIndicator(
           onRefresh: () async {
             _loadNutritionFutures();
@@ -316,9 +303,9 @@ class _HeroHeader extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Colors.white,
-            Color(0xFFF5F6F1),
-            Colors.white,
+            AppTheme.darkSurface,
+            AppTheme.darkRaised,
+            AppTheme.darkSurface,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -331,11 +318,11 @@ class _HeroHeader extends StatelessWidget {
             onTap: onProfile,
             child: CircleAvatar(
               radius: 30,
-              backgroundColor: Colors.grey.shade300,
+              backgroundColor: AppTheme.darkRaised,
               backgroundImage:
                   (avatarUrl != null && avatarUrl!.isNotEmpty) ? NetworkImage(avatarUrl!) : null,
               child: (avatarUrl == null || avatarUrl!.isEmpty)
-                  ? const Icon(Icons.person, size: 32, color: Colors.black87)
+                  ? const Icon(Icons.person, size: 32, color: AppTheme.darkText)
                   : null,
             ),
           ),
@@ -344,7 +331,7 @@ class _HeroHeader extends StatelessWidget {
             child: RichText(
               text: TextSpan(
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: Colors.black87,
+                  color: AppTheme.darkText,
                   fontWeight: FontWeight.w500,
                 ),
                 children: [
@@ -354,7 +341,7 @@ class _HeroHeader extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: AppTheme.darkText,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -364,7 +351,7 @@ class _HeroHeader extends StatelessWidget {
           ),
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.notifications_none_rounded, color: Colors.black87),
+            icon: const Icon(Icons.notifications_none_rounded, color: AppTheme.darkText),
           ),
         ],
       ),
@@ -389,7 +376,7 @@ class _CaloriesRing extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.darkSurface,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
@@ -416,10 +403,10 @@ class _CaloriesRing extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: AppTheme.darkText,
                   ),
                 ),
-                const Text('kcal', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                const Text('kcal', style: TextStyle(fontSize: 12, color: AppTheme.darkMuted)),
               ],
             ),
           ),
@@ -433,7 +420,7 @@ class _CaloriesRing extends StatelessWidget {
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700, color: Colors.black),
+                      ?.copyWith(fontWeight: FontWeight.w700, color: AppTheme.darkText),
                 ),
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
@@ -489,7 +476,7 @@ class _MacroCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: AppTheme.darkText,
             ),
           ),
           const SizedBox(height: 4),
@@ -498,7 +485,7 @@ class _MacroCard extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 18,
-              color: color.darken(),
+              color: color == AppTheme.secondaryColor ? AppTheme.secondaryColor : color,
             ),
           ),
           const SizedBox(height: 6),
@@ -654,8 +641,8 @@ class _ActivityTile extends StatelessWidget {
             backgroundColor: color.withOpacity(.15),
             child: Icon(icon, color: color),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black)),
-          subtitle: Text(subtitle, style: const TextStyle(color: Colors.black54)),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.darkText)),
+          subtitle: Text(subtitle, style: const TextStyle(color: AppTheme.darkMuted)),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {},
         ),
@@ -672,7 +659,7 @@ class _LoadingRow extends StatelessWidget {
     Widget box() => Container(
           height: 90,
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
+            color: AppTheme.darkRaised,
             borderRadius: BorderRadius.circular(18),
           ),
         );
@@ -815,7 +802,7 @@ class _FormCheckShortcutCard extends StatelessWidget {
                 'Form Check\nRecord or review your exercise form.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Colors.black,
+                  color: AppTheme.darkText,
                 ),
               ),
             ),
