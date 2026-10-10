@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Core pages
 import 'package:fitness_flex_app/presentation/pages/splash_page.dart';
@@ -56,7 +57,7 @@ class AppRouter {
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       // Auth
-      splash: (_) => const SplashPage(),
+      splash: (_) => kIsWeb ? const LoginPage() : const SplashPage(),
       onboarding: (_) => const OnboardingPage(),
       login: (_) => const LoginPage(),
       guest: (_) => const GuestExperiencePage(),
