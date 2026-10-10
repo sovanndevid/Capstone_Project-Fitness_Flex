@@ -446,7 +446,7 @@ Widget _buildPopularWorkoutsSection() {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: const AppTheme.darkRaised,
+                      color: AppTheme.darkRaised,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Colors.black.withOpacity(.05)),
                     ),
