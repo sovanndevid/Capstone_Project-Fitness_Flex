@@ -93,9 +93,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Palette tuned for light/dark
-    final primary = const Color(0xFF3F7BFF);
-    final gradientTop = isDark ? const Color(0xFF0E1220) : const Color(0xFFEFF3FF);
-    final gradientBottom = isDark ? const Color(0xFF101427) : const Color(0xFFFFFFFF);
+    final primary = const Color(0xFF171D23);
+    final gradientTop = isDark ? const Color(0xFF101820) : const Color(0xFFF5F6F1);
+    final gradientBottom = isDark ? const Color(0xFF181F29) : const Color(0xFFFFFFFF);
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -116,8 +116,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
             // Decorative blobs (very soft)
             Positioned(top: -80, left: -50, child: _Blob(color: primary.withOpacity(.16), size: 220)),
-            Positioned(bottom: -70, right: -40, child: _Blob(color: Colors.amber.withOpacity(.14), size: 190)),
-            Positioned(top: 120, right: -60, child: _Blob(color: Colors.purple.withOpacity(.10), size: 140)),
+            Positioned(bottom: -70, right: -40, child: _Blob(color: const Color(0xFFC7F681).withOpacity(.14), size: 190)),
+            Positioned(top: 120, right: -60, child: _Blob(color: const Color(0xFF5660E9).withOpacity(.09), size: 140)),
 
             SafeArea(
               child: FadeTransition(
@@ -375,7 +375,7 @@ class _GlassCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: 8, bottom: 14),
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF141A2B) : Colors.white).withOpacity(.92),
+        color: (isDark ? const Color(0xFF181F29) : Colors.white).withOpacity(.92),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: (isDark ? Colors.white : Colors.black).withOpacity(.06),
@@ -405,7 +405,7 @@ class _LogoBadge extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
-          colors: [primary, const Color(0xFF6AA7FF)],
+          colors: [primary, const Color(0xFFC7F681)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -483,7 +483,7 @@ class _RoundedField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fill = isDark ? const Color(0xFF1A2135) : const Color(0xFFF4F6FB);
+    final fill = isDark ? const Color(0xFF1F2A31) : const Color(0xFFF5F6F1);
 
     return TextFormField(
       controller: controller,

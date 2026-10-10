@@ -405,7 +405,7 @@ class _NutritionPageState extends State<NutritionPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // light neutral background
+      backgroundColor: const Color(0xFFF5F6F1), // light neutral background
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white.withOpacity(.9),
@@ -438,7 +438,7 @@ class _NutritionPageState extends State<NutritionPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFF5F7FA), Color(0xFFEFF3F7)],
+            colors: [Color(0xFFFFFFFF), Color(0xFFF5F6F1), Color(0xFFF5F6F1)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),

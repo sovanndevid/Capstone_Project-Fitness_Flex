@@ -109,10 +109,10 @@ class _HomePageState extends State<HomePage> {
 
     final lightTheme = baseTheme.copyWith(
       brightness: Brightness.light,
-      scaffoldBackgroundColor: Colors.white,
+      scaffoldBackgroundColor: const Color(0xFFF5F6F1),
       colorScheme: baseTheme.colorScheme.copyWith(
         brightness: Brightness.light,
-        background: Colors.white,
+        background: const Color(0xFFF5F6F1),
         surface: Colors.white,
         onBackground: Colors.black,
         onSurface: Colors.black,
@@ -126,7 +126,7 @@ class _HomePageState extends State<HomePage> {
     return Theme(
       data: lightTheme,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF5F6F1),
         body: RefreshIndicator(
           onRefresh: () async {
             _loadNutritionFutures();
@@ -192,7 +192,7 @@ class _HomePageState extends State<HomePage> {
                                   label: 'Protein',
                                   value: protein,
                                   goal: goal.dailyProtein,
-                                  color: Colors.blue,
+                                  color: AppTheme.accentColor,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -210,7 +210,7 @@ class _HomePageState extends State<HomePage> {
                                   label: 'Fats',
                                   value: fats,
                                   goal: goal.dailyFat, 
-                                  color: Colors.pink,
+                                  color: AppTheme.secondaryColor,
                                 ),
                               ),
                             ],
@@ -317,7 +317,7 @@ class _HeroHeader extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             Colors.white,
-            Color(0xFFEFF3FF),
+            Color(0xFFF5F6F1),
             Colors.white,
           ],
           begin: Alignment.topLeft,
@@ -541,7 +541,7 @@ class _QuickActions extends StatelessWidget {
       _QA(icon: Icons.fitness_center, label: 'Workouts', onTap: onWorkouts, color: Colors.deepPurple),
       _QA(icon: Icons.restaurant, label: 'Meals', onTap: onNutrition, color: Colors.orange),
       _QA(icon: Icons.show_chart, label: 'Progress', onTap: onProgress, color: Colors.green),
-      _QA(icon: Icons.forum_outlined, label: 'Chat', onTap: onChat, color: Colors.indigo),
+      _QA(icon: Icons.forum_outlined, label: 'Chat', onTap: onChat, color: AppTheme.accentColor),
     ];
     return GridView.builder(
       shrinkWrap: true,

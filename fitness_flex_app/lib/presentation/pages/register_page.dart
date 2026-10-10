@@ -210,9 +210,9 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primary = const Color(0xFF3F7BFF);
-    final gradientTop = isDark ? const Color(0xFF0E1220) : const Color(0xFFEFF3FF);
-    final gradientBottom = isDark ? const Color(0xFF101427) : const Color(0xFFFFFFFF);
+    final primary = const Color(0xFF171D23);
+    final gradientTop = isDark ? const Color(0xFF101820) : const Color(0xFFF5F6F1);
+    final gradientBottom = isDark ? const Color(0xFF181F29) : const Color(0xFFFFFFFF);
 
     return WillPopScope(
       onWillPop: () async {
@@ -237,8 +237,8 @@ class _RegisterPageState extends State<RegisterPage> with SingleTickerProviderSt
               ),
               // Subtle blobs
               Positioned(top: -90, left: -60, child: _Blob(color: primary.withOpacity(.16), size: 240)),
-              Positioned(bottom: -70, right: -40, child: _Blob(color: Colors.amber.withOpacity(.14), size: 200)),
-              Positioned(top: 160, right: -60, child: _Blob(color: Colors.purple.withOpacity(.10), size: 150)),
+              Positioned(bottom: -70, right: -40, child: _Blob(color: const Color(0xFFC7F681).withOpacity(.14), size: 200)),
+              Positioned(top: 160, right: -60, child: _Blob(color: const Color(0xFF5660E9).withOpacity(.09), size: 150)),
 
               SafeArea(
                 child: FadeTransition(
@@ -625,7 +625,7 @@ class _GlassCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF141A2B) : Colors.white).withOpacity(.92),
+        color: (isDark ? const Color(0xFF181F29) : Colors.white).withOpacity(.92),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: (isDark ? Colors.white : Colors.black).withOpacity(.06)),
         boxShadow: [
@@ -656,7 +656,7 @@ class _SectionHeader extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primary.withOpacity(.10),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(21),
             ),
             child: Icon(icon, size: 20),
           ),
@@ -685,7 +685,7 @@ class _LogoBadge extends StatelessWidget {
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
-          colors: [Color(0xFF6C63FF), Color(0xFF9B5EFF)],
+          colors: [Color(0xFF171D23), Color(0xFFC7F681)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -746,7 +746,7 @@ class _RoundedField extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fill = isDark ? const Color(0xFF1A2135) : const Color(0xFFF4F6FB);
+    final fill = isDark ? const Color(0xFF1F2A31) : const Color(0xFFF5F6F1);
 
     return TextFormField(
       controller: controller,
@@ -809,7 +809,7 @@ class _RoundedTapField extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fill = isDark ? const Color(0xFF1A2135) : const Color(0xFFF4F6FB);
+    final fill = isDark ? const Color(0xFF1F2A31) : const Color(0xFFF5F6F1);
 
     return InkWell(
       onTap: onTap,
@@ -865,7 +865,7 @@ class _RoundedDropdown<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fill = isDark ? const Color(0xFF1A2135) : const Color(0xFFF4F6FB);
+    final fill = isDark ? const Color(0xFF1F2A31) : const Color(0xFFF5F6F1);
 
     return DropdownButtonFormField<T>(
       value: value,
@@ -960,7 +960,7 @@ class _BadgeStat extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primary.withOpacity(.10),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(21),
             ),
             child: Icon(icon, size: 18),
           ),

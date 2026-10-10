@@ -158,7 +158,7 @@ class _WorkoutRowCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF141A2B) : Colors.white).withOpacity(.92),
+        color: (isDark ? const Color(0xFF171D23) : Colors.white).withOpacity(.92),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: (isDark ? Colors.white : Colors.black).withOpacity(.06)),
         boxShadow: [
@@ -307,7 +307,7 @@ class _ThumbIcon extends StatelessWidget {
       width: 52,
       height: 52,
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF1A2135) : const Color(0xFFF0F3F7)),
+        color: (isDark ? const Color(0xFF181F29) : const Color(0xFFE8EEE5)),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.black.withOpacity(.06)),
       ),
@@ -328,7 +328,7 @@ class _MiniLogoBadge extends StatelessWidget {
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
-          colors: [Color(0xFF6C63FF), Color(0xFF9B5EFF)],
+          colors: [Color(0xFF171D23), Color(0xFFC7F681)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -367,7 +367,7 @@ class _EmptyCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF141A2B) : Colors.white).withOpacity(.92),
+        color: (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF171D23) : Colors.white).withOpacity(.92),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black).withOpacity(.06)),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(.08), blurRadius: 18, offset: const Offset(0, 8))],

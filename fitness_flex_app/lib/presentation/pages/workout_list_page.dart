@@ -77,7 +77,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF5F6F1),
       appBar: AppBar(
         title: const Text(
           'Workouts',
@@ -108,7 +108,7 @@ class _WorkoutListPageState extends State<WorkoutListPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFF5F7FA), Color(0xFFEFF3F7)],
+            colors: [Color(0xFFFFFFFF), Color(0xFFF5F6F1), Color(0xFFF5F6F1)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -446,7 +446,7 @@ Widget _buildPopularWorkoutsSection() {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF0F3F7),
+                      color: const Color(0xFFE8EEE5),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Colors.black.withOpacity(.05)),
                     ),
