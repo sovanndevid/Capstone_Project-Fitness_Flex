@@ -74,14 +74,17 @@ class _GuestAccessPageState extends State<GuestAccessPage> {
         child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 66, height: 66,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppTheme.secondaryColor,
-                borderRadius: BorderRadius.circular(18)),
-              child: const Icon(Icons.person_outline, size: 35,
-                color: AppTheme.primaryColor)),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: 66, height: 66,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppTheme.secondaryColor,
+                  borderRadius: BorderRadius.circular(18)),
+                child: const Icon(Icons.person_outline, size: 35,
+                  color: AppTheme.primaryColor)),
+            ),
             const SizedBox(height: 18),
             Text('Your workout. No password.',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -97,7 +100,7 @@ class _GuestAccessPageState extends State<GuestAccessPage> {
               'Signing out, resetting browser storage or switching to a new account '
               'can make them inaccessible. Guest data is not automatically transferred '
               'when you later sign in.',
-              style: TextStyle(fontSize: 12, color: AppTheme.greyColor,
+              style: TextStyle(fontSize: 12, color: AppTheme.darkMuted,
                 height: 1.5)),
             if (_busy) ...[
               const SizedBox(height: 23),
