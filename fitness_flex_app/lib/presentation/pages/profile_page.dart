@@ -545,7 +545,7 @@ class _HeroHeaderProfile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 36,
-                backgroundColor: Colors.grey.shade300,
+                backgroundColor: AppTheme.darkRaised,
                 backgroundImage:
                     (photoURL != null && photoURL!.isNotEmpty) ? NetworkImage(photoURL!) : null,
                 child: (photoURL == null || photoURL!.isEmpty)
@@ -577,7 +577,7 @@ class _HeroHeaderProfile extends StatelessWidget {
                     customBorder: const CircleBorder(),
                     child: const Padding(
                       padding: EdgeInsets.all(6.0),
-                      child: Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                      child: Icon(Icons.camera_alt, color: AppTheme.primaryColor, size: 18),
                     ),
                   ),
                 ),

@@ -780,8 +780,8 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        color: Colors.white,
-        border: Border.all(color: Colors.grey.withOpacity(.07)),
+        color: AppTheme.darkSurface,
+        border: Border.all(color: AppTheme.darkBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(.05),

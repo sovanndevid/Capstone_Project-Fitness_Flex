@@ -951,7 +951,7 @@ class _NutritionPageState extends State<NutritionPage> {
                                   style: TextStyle(
                                     fontSize: 15.5,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade900,
+                                    color: AppTheme.darkText,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -1001,7 +1001,7 @@ class _NutritionPageState extends State<NutritionPage> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
+                  color: AppTheme.darkRaised,
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
@@ -1016,7 +1016,7 @@ class _NutritionPageState extends State<NutritionPage> {
                       padding: EdgeInsets.only(bottom: i == 3 ? 0.0 : 10.0),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
+                          color: AppTheme.darkRaised,
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
@@ -1360,7 +1360,7 @@ class _RingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..shader = LinearGradient(
-        colors: [Colors.grey.shade200, Colors.grey.shade100],
+        colors: [AppTheme.darkRaised, AppTheme.darkSurface],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(rect);
@@ -1488,7 +1488,7 @@ class _MacroChip extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: pct,
                   minHeight: 6,
-                  backgroundColor: Colors.white,
+                  backgroundColor: AppTheme.darkRaised,
                   valueColor: AlwaysStoppedAnimation(
                     over ? Colors.redAccent : item.color,
                   ),
@@ -1768,7 +1768,7 @@ class _MealTypeSegmentedControlState extends State<_MealTypeSegmentedControl> {
   Widget build(BuildContext context) {
     return Material(
       elevation: 2,
-      color: Colors.white,
+      color: AppTheme.darkSurface,
       shadowColor: Colors.black.withOpacity(.06),
       borderRadius: BorderRadius.circular(26),
       child: Container(
@@ -2008,7 +2008,7 @@ class _MacroProgressRow extends StatelessWidget {
                       children: [
                         LinearProgressIndicator(
                           value: pct,
-                          backgroundColor: Colors.white,
+                          backgroundColor: AppTheme.darkRaised,
                           valueColor: AlwaysStoppedAnimation(barColor),
                         ),
                         if (over)

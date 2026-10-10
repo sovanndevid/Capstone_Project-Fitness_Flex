@@ -668,7 +668,7 @@ class _LoadingRow extends StatelessWidget {
         Container(
           height: 130,
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
+            color: AppTheme.darkRaised,
             borderRadius: BorderRadius.circular(22),
           ),
         ),

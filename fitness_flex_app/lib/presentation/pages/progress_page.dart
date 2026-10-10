@@ -1424,7 +1424,7 @@ class _ProgressPageState extends State<ProgressPage> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white, // white toggle background
+        color: AppTheme.darkSurface, // dark toggle background
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.black12),
         boxShadow: [
@@ -1454,10 +1454,10 @@ class _ProgressPageState extends State<ProgressPage> {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white, // white buttons
+            color: selected ? AppTheme.darkRaised : AppTheme.darkSurface, // selection
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? AppTheme.primaryColor : Colors.black12,
+              color: selected ? AppTheme.secondaryColor : AppTheme.darkBorder,
               width: 1,
             ),
           ),
@@ -1647,7 +1647,7 @@ class _KpiChip extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white, // solid white for readability
+        color: AppTheme.darkRaised, // dark KPI surface
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
