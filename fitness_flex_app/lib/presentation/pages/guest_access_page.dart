@@ -67,7 +67,7 @@ class _GuestAccessPageState extends State<GuestAccessPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Continue as Guest')),
-    body: SafeArea(child: Center(child: ConstrainedBox(
+    body: SafeArea(child: Center(child: SingleChildScrollView(child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 510),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -121,6 +121,6 @@ class _GuestAccessPageState extends State<GuestAccessPage> {
             ],
           ]),
       ),
-    ))),
+    )))),
   );
 }
