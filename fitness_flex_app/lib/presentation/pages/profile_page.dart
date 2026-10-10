@@ -152,9 +152,29 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _signOut() async {
+    if (FirebaseAuth.instance.currentUser?.isAnonymous == true) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Leave guest mode?'),
+          content: const Text(
+            'Guest data may become inaccessible after signing out. '
+            'It does not automatically transfer to a new account. '
+            'Sign out only when you no longer need this guest session.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Keep guest session')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Sign out')),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
-    Navigator.of(context).pop();
+    Navigator.pushNamedAndRemoveUntil(context, AppRouter.login, (_) => false);
   }
 
   @override
@@ -180,7 +200,7 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
 
-    final email = _user!.email ?? 'No email';
+    final email = _user!.isAnonymous ? 'Guest account · temporary access' : (_user!.email ?? 'No email');
     final initialLetter = ((_user!.displayName?.isNotEmpty ?? false)
             ? _user!.displayName!.trim()[0]
             : email[0])
@@ -196,7 +216,7 @@ class _ProfilePageState extends State<ProfilePage> {
             SliverToBoxAdapter(
               child: _HeroHeaderProfile(
                 name: _nameCtrl.text.trim().isEmpty
-                    ? (_user!.displayName ?? 'Athlete')
+                    ? (_user!.displayName ?? (_user!.isAnonymous ? 'Guest' : 'Athlete'))
                     : _nameCtrl.text.trim(),
                 email: email,
                 photoURL: _photoURL,
