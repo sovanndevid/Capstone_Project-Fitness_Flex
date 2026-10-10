@@ -26,7 +26,16 @@ const { spawn } = require('node:child_process');
       }));
       const screenshotPath = 'qa-screenshots/' + device + '.png';
       await page.screenshot({path: screenshotPath, fullPage: true});
-      reports.push({device, ...detail, screenshot: screenshotPath, pageErrors: errors});
+      // Exercise actual canvas buttons in the compiled app, not just widget tests.
+      // Three transitions: page 1 -> page 2 -> page 3 -> Login.
+      const buttonX = width > 900 ? width / 2 + 458 : width - 62;
+      for (let step = 0; step < 3; step++) {
+        await page.mouse.click(buttonX, height - 38);
+        await page.waitForTimeout(1150);
+      }
+      const loginPath = 'qa-screenshots/login-' + device + '.png';
+      await page.screenshot({path: loginPath, fullPage: true});
+      reports.push({device, ...detail, screenshot: screenshotPath, loginScreenshot: loginPath, pageErrors: errors});
       console.log(JSON.stringify(reports[reports.length-1]));
       if (errors.length) throw new Error('Runtime JavaScript exceptions on ' + device + ': ' + errors.join(' | '));
       if (detail.flutterViews < 1) throw new Error('Flutter view missing on ' + device);
