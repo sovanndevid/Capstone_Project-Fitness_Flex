@@ -1467,7 +1467,7 @@ class _ProgressPageState extends State<ProgressPage> {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: selected
-                  ? AppTheme.primaryColor
+                  ? AppTheme.secondaryColor
                   : AppTheme.darkText, // readable text
             ),
           ),
