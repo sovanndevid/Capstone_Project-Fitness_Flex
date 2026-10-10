@@ -43,6 +43,12 @@ jobs:
       - name: Flutter browser widget tests
         run: flutter test --platform chrome --reporter expanded
 
+      - name: Optimize images only in this temporary web checkout
+        run: |
+          python3 -m venv /tmp/fitnessflex-images
+          /tmp/fitnessflex-images/bin/pip install --quiet Pillow==11.3.0
+          /tmp/fitnessflex-images/bin/python scripts/optimize_web_images.py
+
       - name: Compile production web bundle
         run: flutter build web --release --base-href /fitnessflex-app/
 
