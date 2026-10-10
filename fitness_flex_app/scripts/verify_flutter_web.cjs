@@ -46,9 +46,36 @@ const { spawn } = require('node:child_process');
         inputs: document.querySelectorAll('input').length,
         semantics: !!document.querySelector('flt-semantics-host'),
       }));
+      let interceptedResets = null;
+      if (device === 'mobile') {
+        // Exercise the actual compiled FlutterFire web bridge against a stubbed
+        // Identity Toolkit response, never send an email from CI.
+        interceptedResets = 0;
+        await page.route('**/identitytoolkit.googleapis.com/**', async route => {
+          if (route.request().url.includes('sendOobCode')) {
+            interceptedResets++;
+            await route.fulfill({
+              status: 400, contentType: 'application/json',
+              body: JSON.stringify({ error: { code: 400,
+                message: 'TOO_MANY_ATTEMPTS_TRY_LATER' } }),
+            });
+          } else {
+            await route.continue();
+          }
+        });
+        await page.mouse.click(180, 485); // password-reset email input
+        await page.keyboard.type('qa-test@example.com', {delay: 15});
+        await page.waitForTimeout(300);
+        await page.mouse.click(185, 565); // Send Reset Link
+        await page.waitForTimeout(2400);
+        await page.screenshot({path: 'qa-screenshots/reset-response-mobile.png', fullPage: true});
+        if (interceptedResets !== 1) {
+          throw new Error('Mocked Firebase password reset expected exactly one request, observed ' + interceptedResets);
+        }
+      }
       reports.push({device, ...detail, screenshot: screenshotPath,
         loginScreenshot: loginPath, resetScreenshot: resetPath,
-        browserInputs, pageErrors: errors});
+        interceptedResets, browserInputs, pageErrors: errors});
       console.log(JSON.stringify(reports[reports.length-1]));
       if (errors.length) throw new Error('Runtime JavaScript exceptions on ' + device + ': ' + errors.join(' | '));
       if (detail.flutterViews < 1) throw new Error('Flutter view missing on ' + device);
