@@ -1,30 +1,31 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:fitness_flex_app/main.dart';
+import 'package:fitness_flex_app/presentation/pages/onboarding_page.dart';
+import 'package:fitness_flex_app/features/form_check/form_check_menu_page.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const FitnessFlexApp());
+  testWidgets('Onboarding advances through actual app slides', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: OnboardingPage()));
+    expect(find.text('Track Your Workouts'), findsOneWidget);
+    expect(find.text('Log your exercises, sets, reps, and weights with ease'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Personalized Plans'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Monitor Progress'), findsOneWidget);
+    expect(find.text('Get Started'), findsOneWidget);
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('Squat is selectable but unimplemented exercises stay disabled', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: FormCheckMenuPage()));
+    expect(find.text('Back Squat'), findsOneWidget);
+    expect(find.text('Push-up'), findsOneWidget);
+    final squat = tester.widget<ListTile>(find.ancestor(
+      of: find.text('Back Squat'), matching: find.byType(ListTile)));
+    final pushup = tester.widget<ListTile>(find.ancestor(
+      of: find.text('Push-up'), matching: find.byType(ListTile)));
+    expect(squat.onTap, isNotNull);
+    expect(pushup.onTap, isNull);
   });
 }
