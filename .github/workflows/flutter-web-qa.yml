@@ -1,0 +1,67 @@
+name: Flutter Web visual QA (no deployment)
+
+on:
+  push:
+    branches:
+      - fitnessflex-web-qa
+    paths:
+      - 'fitness_flex_app/**'
+      - '.github/workflows/flutter-web-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    name: Flutter tests and staged web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: fitness_flex_app
+    steps:
+      - name: Clone project without optional malformed submodule
+        working-directory: .
+        run: git clone --depth 1 --branch fitnessflex-web-qa https://github.com/sovanndevid/Capstone_Project-Fitness_Flex.git .
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Static analysis — errors block release
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Flutter widget tests
+        run: flutter test --reporter expanded
+
+      - name: Flutter browser widget tests
+        run: flutter test --platform chrome --reporter expanded
+
+      - name: Compile production web bundle
+        run: flutter build web --release --base-href /fitnessflex-app/
+
+      - name: Verify output and no source secrets in bundle
+        run: |
+          test -s build/web/index.html
+          test -s build/web/flutter_bootstrap.js
+          test -s build/web/main.dart.js
+          grep -q 'base href="/fitnessflex-app/"' build/web/index.html
+          if grep -R -E 'sk-proj-[A-Za-z0-9_-]{30,}' build/web/; then
+            echo "Error: exposed API key found in staged build" >&2
+            exit 1
+          fi
+          echo "All staged web bundle checks passed."
+
+      - name: Upload unpublished build for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitnessflex-web-qa-artifact
+          path: fitness_flex_app/build/web/
+          retention-days: 7
+          if-no-files-found: error
