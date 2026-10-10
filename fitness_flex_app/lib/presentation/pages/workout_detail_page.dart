@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitness_flex_app/core/themes/app_theme.dart';
 import 'package:fitness_flex_app/data/models/workout_model.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_player_page.dart';
 
@@ -45,18 +46,18 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
     final diffColor = _difficultyColor(widget.workout.difficulty, context);
 
     return Scaffold(
-      backgroundColor: Colors.white, // <-- solid white background as requested
+      backgroundColor: AppTheme.darkBackground,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white, // solid white app bar
-        surfaceTintColor: Colors.white,
+        backgroundColor: AppTheme.darkBackground,
+        surfaceTintColor: Colors.transparent,
         titleSpacing: 0,
         title: Text(
           widget.workout.title,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w900,
-                color: Colors.black,
+                color: AppTheme.darkText,
               ),
         ),
         leading: IconButton(
@@ -102,7 +103,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
-                            color: Colors.black,
+                            color: AppTheme.darkText,
                             letterSpacing: .2,
                           ),
                         ),
@@ -111,7 +112,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                           widget.workout.category,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.black.withOpacity(.65),
+                            color: AppTheme.darkMuted,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -204,7 +205,7 @@ class _WorkoutDetailPageState extends State<WorkoutDetailPage> {
                     fontWeight: FontWeight.w900,
                     fontSize: 18,
                     letterSpacing: .2,
-                    color: Colors.black,
+                    color: AppTheme.darkText,
                   ),
                 ),
               ],
@@ -253,9 +254,9 @@ class _Card extends StatelessWidget {
     return Container(
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.darkSurface,
         borderRadius: BorderRadius.circular(radius ?? 18),
-        border: Border.all(color: Colors.black.withOpacity(.06)),
+        border: Border.all(color: AppTheme.darkBorder.withOpacity(.65)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(.05),
@@ -400,9 +401,9 @@ class _ExerciseTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(.06)),
+        border: Border.all(color: AppTheme.darkBorder.withOpacity(.65)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(.05),
@@ -455,7 +456,7 @@ class _ExerciseTile extends StatelessWidget {
                       exercise.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 15.5),
+                      style: const TextStyle(color: AppTheme.darkText, fontWeight: FontWeight.w800, fontSize: 15.5),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -463,7 +464,7 @@ class _ExerciseTile extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.black.withOpacity(.75),
+                        color: AppTheme.darkMuted,
                         fontSize: 12.5,
                         height: 1.25,
                         fontWeight: FontWeight.w600,
