@@ -31,25 +31,37 @@ const { spawn } = require('node:child_process');
       if(started.flutterViews!==1 || started.width>started.viewport+5)
         throw new Error('Flutter login startup or overflow failed: '+JSON.stringify(started));
 
-      // Click the real "Continue as Guest" canvas button.
+      // Never create real Firebase accounts from CI: intercept anonymous sign-up.
+      let anonymousRequests = 0;
+      await page.route('**/identitytoolkit.googleapis.com/**', async route => {
+        if (route.request().url().includes('accounts:signUp')) {
+          anonymousRequests++;
+          await route.fulfill({
+            status: 400, contentType: 'application/json',
+            headers: {'access-control-allow-origin':'*'},
+            body: JSON.stringify({error:{code:400,message:'OPERATION_NOT_ALLOWED'}}),
+          });
+        } else {
+          await route.continue();
+        }
+      });
+      // Click the real "Continue as Guest" button. The route is allowed to
+      // show its error state instead of entering /home when Firebase denies it.
       await page.mouse.click(width/2, 540);
-      await page.waitForTimeout(1400);
+      await page.waitForTimeout(2000);
       const guestUrl = page.url();
       await page.screenshot({path: 'qa-screenshots/guest-'+device+'.png',fullPage:true});
-      if (!guestUrl.includes('/guest')) {
-        throw new Error('Guest navigation did not reach /guest: '+guestUrl);
+      if (anonymousRequests !== 1 || !guestUrl.includes('/guest')) {
+        throw new Error('Guest access error-handling failed: '+
+          JSON.stringify({anonymousRequests,guestUrl}));
       }
-      // Open the exercise library tab through the guest bottom navigation.
-      await page.mouse.click(width*.375, height-35);
-      await page.waitForTimeout(550);
-      await page.screenshot({path: 'qa-screenshots/exercises-'+device+'.png',fullPage:true});
       const viewport = await page.evaluate(()=>({
         width: document.documentElement.scrollWidth, viewport: innerWidth,
       }));
       if(viewport.width>viewport.viewport+5)
         throw new Error('Guest horizontal overflow: '+JSON.stringify(viewport));
       if(errors.length)throw new Error('Uncaught browser exceptions: '+errors.join(' | '));
-      const report={device, guestUrl, started, viewport, javascriptErrors:errors};
+      const report={device, guestUrl, anonymousRequests, started, viewport, javascriptErrors:errors};
       reports.push(report);
       console.log(JSON.stringify(report));
       await page.close();
