@@ -52,7 +52,7 @@ const { spawn } = require('node:child_process');
         // Identity Toolkit response, never send an email from CI.
         interceptedResets = 0;
         await page.route('**/identitytoolkit.googleapis.com/**', async route => {
-          if (route.request().url.includes('sendOobCode')) {
+          if (route.request().url().includes('sendOobCode')) {
             interceptedResets++;
             await route.fulfill({
               status: 400, contentType: 'application/json',
