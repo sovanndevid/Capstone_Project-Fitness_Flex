@@ -276,51 +276,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
                               const SizedBox(height: 12),
 
-                              // Divider with "or"
-                              Row(
-                                children: [
-                                  const Expanded(child: _Hairline()),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                    child: Text(
-                                      'or continue with',
-                                      style: TextStyle(
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.color
-                                            ?.withOpacity(.65),
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                  const Expanded(child: _Hairline()),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-
-                              // Social buttons (rounded)
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _RoundedOutlineButton(
-                                      icon: Icons.g_mobiledata_rounded,
-                                      label: 'Google',
-                                      onPressed: () {}, // hook later
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _RoundedOutlineButton(
-                                      icon: Icons.apple_rounded,
-                                      label: 'Apple',
-                                      onPressed: () {}, // hook later
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 18),
+                              const SizedBox(height: 22),
+                              // Unimplemented Google/Apple actions are deliberately hidden.
+                              // Email/password Firebase sign-in remains unchanged.
                               // Sign up link
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
