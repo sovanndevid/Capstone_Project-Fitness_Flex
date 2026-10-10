@@ -1,0 +1,41 @@
+const { chromium } = require('playwright');
+const fs = require('node:fs');
+const { spawn } = require('node:child_process');
+
+(async () => {
+  const server = spawn('python3', ['-m', 'http.server', '8765', '--directory', 'staging'], {
+    stdio: 'ignore', detached: true,
+  });
+  const browser = await chromium.launch({channel: 'chrome', headless: true,
+    args: ['--no-sandbox', '--disable-dev-shm-usage']});
+  const reports = [];
+  try {
+    fs.mkdirSync('qa-screenshots', { recursive: true });
+    for (const [device, width, height] of [['mobile', 390, 844], ['desktop', 1440, 900]]) {
+      const page = await browser.newPage({viewport: {width, height}, deviceScaleFactor: 1});
+      const errors = [];
+      page.on('pageerror', err => errors.push(err.message));
+      await page.goto('http://127.0.0.1:8765/fitnessflex-app/', {waitUntil: 'domcontentloaded', timeout: 30000});
+      await page.locator('flutter-view').first().waitFor({state:'attached',timeout: 30000});
+      await page.waitForTimeout(5500); // Splash is two seconds, then onboarding.
+      const detail = await page.evaluate(() => ({
+        flutterViews: document.querySelectorAll('flutter-view').length,
+        title: document.title,
+        width: document.documentElement.scrollWidth,
+        windowWidth: innerWidth,
+      }));
+      const screenshotPath = 'qa-screenshots/' + device + '.png';
+      await page.screenshot({path: screenshotPath, fullPage: true});
+      reports.push({device, ...detail, screenshot: screenshotPath, pageErrors: errors});
+      console.log(JSON.stringify(reports[reports.length-1]));
+      if (errors.length) throw new Error('Runtime JavaScript exceptions on ' + device + ': ' + errors.join(' | '));
+      if (detail.flutterViews < 1) throw new Error('Flutter view missing on ' + device);
+      if (detail.width > detail.windowWidth + 5) throw new Error('Unexpected horizontal overflow on ' + device);
+      await page.close();
+    }
+    fs.writeFileSync('qa-screenshots/results.json', JSON.stringify(reports, null, 2));
+  } finally {
+    await browser.close();
+    process.kill(-server.pid, 'SIGTERM');
+  }
+})().catch(error => { console.error(error); process.exitCode = 1; });
