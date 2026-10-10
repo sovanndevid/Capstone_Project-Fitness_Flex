@@ -35,7 +35,20 @@ const { spawn } = require('node:child_process');
       }
       const loginPath = 'qa-screenshots/login-' + device + '.png';
       await page.screenshot({path: loginPath, fullPage: true});
-      reports.push({device, ...detail, screenshot: screenshotPath, loginScreenshot: loginPath, pageErrors: errors});
+      // The password reset screen is a real Flutter canvas route.
+      // Check that the link opens without a JavaScript runtime exception.
+      const forgotX = device === 'mobile' ? 275 : 875;
+      await page.mouse.click(forgotX, 382);
+      await page.waitForTimeout(900);
+      const resetPath = 'qa-screenshots/reset-' + device + '.png';
+      await page.screenshot({path: resetPath, fullPage: true});
+      const browserInputs = await page.evaluate(() => ({
+        inputs: document.querySelectorAll('input').length,
+        semantics: !!document.querySelector('flt-semantics-host'),
+      }));
+      reports.push({device, ...detail, screenshot: screenshotPath,
+        loginScreenshot: loginPath, resetScreenshot: resetPath,
+        browserInputs, pageErrors: errors});
       console.log(JSON.stringify(reports[reports.length-1]));
       if (errors.length) throw new Error('Runtime JavaScript exceptions on ' + device + ': ' + errors.join(' | '));
       if (detail.flutterViews < 1) throw new Error('Flutter view missing on ' + device);
