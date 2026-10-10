@@ -37,6 +37,12 @@ jobs:
       - name: Static analysis — errors block release
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      - name: Guard against hard-coded light theme regressions
+        run: |
+          grep -q 'themeMode: ThemeMode.dark' lib/main.dart
+          ! grep -q 'Brightness.light' lib/presentation/pages/home_page.dart
+          ! grep -q 'backgroundColor: Colors.white, // <-- solid white' lib/presentation/pages/workout_detail_page.dart
+
       - name: Flutter widget tests
         run: flutter test --reporter expanded
 
