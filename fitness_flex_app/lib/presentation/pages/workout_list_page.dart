@@ -1110,7 +1110,7 @@ class _WorkoutHeroSliderState extends State<_WorkoutHeroSlider> {
         child: Stack(
           children: [
             // Black base to avoid white flashes
-            const Positioned.fill(child: ColoredBox(color: AppTheme.darkText)),
+            const Positioned.fill(child: ColoredBox(color: AppTheme.darkBackground)),
             PageView.builder(
               controller: _controller,
               allowImplicitScrolling: true, // prebuild neighbors
