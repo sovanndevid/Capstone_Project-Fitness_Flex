@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fitness_flex_app/presentation/pages/splash_page.dart';
 import 'package:fitness_flex_app/presentation/pages/onboarding_page.dart';
 import 'package:fitness_flex_app/presentation/pages/login_page.dart';
+import 'package:fitness_flex_app/presentation/pages/guest_experience_page.dart';
 import 'package:fitness_flex_app/presentation/pages/register_page.dart';
 import 'package:fitness_flex_app/presentation/pages/home_page.dart';
 import 'package:fitness_flex_app/presentation/pages/workout_list_page.dart';
@@ -31,6 +32,7 @@ class AppRouter {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String register = '/register';
+  static const String guest = '/guest';
   static const String verifyEmail = '/verifyEmail';
 
   // 🔹 Main sections
@@ -57,6 +59,7 @@ class AppRouter {
       splash: (_) => const SplashPage(),
       onboarding: (_) => const OnboardingPage(),
       login: (_) => const LoginPage(),
+      guest: (_) => const GuestExperiencePage(),
       register: (_) => const RegisterPage(),
       verifyEmail: (_) => const VerifyEmailPage(),
 

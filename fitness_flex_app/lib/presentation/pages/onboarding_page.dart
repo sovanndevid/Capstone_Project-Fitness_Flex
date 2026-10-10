@@ -125,6 +125,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
               if (_currentPage < onboardingData.length - 1)
                 TextButton(onPressed: () => Navigator.pushReplacementNamed(context, AppRouter.login), child: const Text('Skip')),
               const SizedBox(width: 8),
+              if (wide)
+                TextButton.icon(
+                  onPressed: () => Navigator.pushReplacementNamed(context, AppRouter.guest),
+                  icon: const Icon(Icons.explore_outlined, size: 16),
+                  label: const Text('Explore as guest'),
+                ),
               ElevatedButton.icon(onPressed: _continue,
                 iconAlignment: IconAlignment.end,
                 icon: const Icon(Icons.arrow_forward_rounded, size: 18),

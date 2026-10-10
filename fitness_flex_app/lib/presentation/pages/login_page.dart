@@ -279,6 +279,26 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               const SizedBox(height: 22),
                               // Unimplemented Google/Apple actions are deliberately hidden.
                               // Email/password Firebase sign-in remains unchanged.
+                              SizedBox(
+                                width: double.infinity,
+                                height: 50,
+                                child: OutlinedButton.icon(
+                                  onPressed: _loading ? null : () =>
+                                      Navigator.pushReplacementNamed(context, AppRouter.guest),
+                                  icon: const Icon(Icons.explore_outlined),
+                                  label: const Text('Continue as Guest'),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Guest progress stays on this device only. No account needed.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
                               // Sign up link
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
